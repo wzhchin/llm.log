@@ -187,6 +187,11 @@
   animation: fade-in 0.3s var(--ease-out-quart) both;
 }
 
+/* Slide-in from right (for detail panels) */
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s var(--ease-out-expo) both;
+}
+
 /* Chameleon animations */
 @keyframes chameleon-tongue {
   0% { transform: scaleX(0); }
