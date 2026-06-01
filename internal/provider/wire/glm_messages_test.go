@@ -63,9 +63,9 @@ func TestGLMMessages_Parse_WebSearch(t *testing.T) {
 
 func TestGLMMessages_ParseStream(t *testing.T) {
 	events := []SSEEvent{
-		{Event: "message_start", Data: []byte(`{"message":{"model":"glm-5.1","usage":{"input_tokens":161,"cache_read_input_tokens":48256}}}`)},
+		{Event: "message_start", Data: []byte(`{"message":{"model":"glm-5.1","usage":{"input_tokens":0,"output_tokens":0}}}`)},
 		{Event: "content_block_delta", Data: []byte(`{"delta":{"type":"text_delta","text":"Hello"}}`)},
-		{Event: "message_delta", Data: []byte(`{"usage":{"output_tokens":64}}`)},
+		{Event: "message_delta", Data: []byte(`{"usage":{"input_tokens":161,"output_tokens":64,"cache_read_input_tokens":48256}}`)},
 	}
 
 	r, err := GLMMessages.ParseStream(events)

@@ -59,17 +59,10 @@ func (g *glmMessages) ParseStream(events []SSEEvent) (*Result, error) {
 			var msg struct {
 				Message struct {
 					Model string `json:"model"`
-					Usage struct {
-						InputTokens          int `json:"input_tokens"`
-						CacheReadInputTokens int `json:"cache_read_input_tokens"`
-					} `json:"usage"`
 				} `json:"message"`
 			}
 			if json.Unmarshal(ev.Data, &msg) == nil {
-				u := msg.Message.Usage
 				result.Model = msg.Message.Model
-				result.CacheReadTokens = u.CacheReadInputTokens
-				result.InputTokens = u.InputTokens + u.CacheReadInputTokens
 			}
 
 		case "content_block_delta":
