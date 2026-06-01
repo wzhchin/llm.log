@@ -17,6 +17,43 @@ type Format interface {
 	ParseStream(events []SSEEvent) (*Result, error)
 }
 
+// ProviderDetails holds provider-specific usage details.
+// Use a type switch to extract provider-specific data:
+//
+//	switch d := result.Details.(type) {
+//	case wire.OpenAIDetails:
+//	    // d.AudioInputTokens, d.AudioOutputTokens
+//	case wire.AnthropicDetails:
+//	    // d.WebSearchRequests, d.FastMode
+//	}
+type ProviderDetails interface {
+	providerDetails() // sealed: only implementations in this package
+}
+
+// OpenAIDetails holds OpenAI-specific usage data.
+// AudioInputTokens and AudioOutputTokens are subsets of InputTokens and
+// OutputTokens that were audio. Priced at a different rate.
+type OpenAIDetails struct {
+	AudioInputTokens  int
+	AudioOutputTokens int
+}
+
+func (OpenAIDetails) providerDetails() {}
+
+// AnthropicDetails holds Anthropic-specific usage data.
+type AnthropicDetails struct {
+	// WebSearchRequests is the number of server-side web searches performed.
+	// Billed at a flat per-search rate.
+	WebSearchRequests int
+
+	// FastMode indicates the response was served in fast mode (6x pricing).
+	// Detected from usage.speed == "fast" in the API response.
+	// Ref: https://platform.claude.com/docs/en/build-with-claude/fast-mode
+	FastMode bool
+}
+
+func (AnthropicDetails) providerDetails() {}
+
 // Result holds parsed usage data from an API response.
 // InputTokens is the total input tokens INCLUDING all cache tokens.
 type Result struct {
@@ -25,22 +62,8 @@ type Result struct {
 	OutputTokens     int
 	CacheReadTokens  int
 	CacheWriteTokens int
-
-	// AudioInputTokens and AudioOutputTokens are subsets of InputTokens and
-	// OutputTokens that were audio (OpenAI only). Priced at a different rate.
-	AudioInputTokens  int
-	AudioOutputTokens int
-
-	// WebSearchRequests is the number of server-side web searches performed
-	// (Anthropic only). Billed at a flat per-search rate.
-	WebSearchRequests int
-
-	// FastMode indicates the Anthropic response was served in fast mode (6x pricing).
-	// Detected from usage.speed == "fast" in the API response.
-	// Ref: https://platform.claude.com/docs/en/build-with-claude/fast-mode
-	FastMode bool
-
-	ResponseBody []byte
+	Details          ProviderDetails // nil for providers without extras
+	ResponseBody     []byte
 }
 
 // SSEEvent is a single server-sent event from a streaming response.

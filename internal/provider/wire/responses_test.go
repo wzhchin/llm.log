@@ -80,11 +80,15 @@ func TestResponses_Parse_AudioTokens(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.AudioInputTokens != 600 {
-		t.Errorf("audio input = %d, want 600", r.AudioInputTokens)
+	d, ok := r.Details.(OpenAIDetails)
+	if !ok {
+		t.Fatal("expected OpenAIDetails")
 	}
-	if r.AudioOutputTokens != 250 {
-		t.Errorf("audio output = %d, want 250", r.AudioOutputTokens)
+	if d.AudioInputTokens != 600 {
+		t.Errorf("audio input = %d, want 600", d.AudioInputTokens)
+	}
+	if d.AudioOutputTokens != 250 {
+		t.Errorf("audio output = %d, want 250", d.AudioOutputTokens)
 	}
 }
 
@@ -98,11 +102,15 @@ func TestResponses_ParseStream_AudioTokens(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.AudioInputTokens != 300 {
-		t.Errorf("audio input = %d, want 300", r.AudioInputTokens)
+	d, ok := r.Details.(OpenAIDetails)
+	if !ok {
+		t.Fatal("expected OpenAIDetails")
 	}
-	if r.AudioOutputTokens != 100 {
-		t.Errorf("audio output = %d, want 100", r.AudioOutputTokens)
+	if d.AudioInputTokens != 300 {
+		t.Errorf("audio input = %d, want 300", d.AudioInputTokens)
+	}
+	if d.AudioOutputTokens != 100 {
+		t.Errorf("audio output = %d, want 100", d.AudioOutputTokens)
 	}
 }
 

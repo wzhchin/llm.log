@@ -208,10 +208,12 @@ func TestCost_WithAudioTokens(t *testing.T) {
 	// 1000 total input, 800 audio input, 200 text input
 	// 500 total output, 300 audio output, 200 text output
 	cost := db.Cost("openai", "gpt-4o-audio", &wire.Result{
-		InputTokens:       1000,
-		OutputTokens:      500,
-		AudioInputTokens:  800,
-		AudioOutputTokens: 300,
+		InputTokens:  1000,
+		OutputTokens: 500,
+		Details: wire.OpenAIDetails{
+			AudioInputTokens:  800,
+			AudioOutputTokens: 300,
+		},
 	}, 1.0, false)
 	if cost == nil {
 		t.Fatal("expected cost")
@@ -231,9 +233,11 @@ func TestCost_WithWebSearch(t *testing.T) {
 		"claude-sonnet-4-6": {InputPerMTok: 3, OutputPerMTok: 15},
 	}}
 	cost := db.Cost("anthropic", "claude-sonnet-4-6", &wire.Result{
-		InputTokens:       1000,
-		OutputTokens:      500,
-		WebSearchRequests: 3,
+		InputTokens:  1000,
+		OutputTokens: 500,
+		Details: wire.AnthropicDetails{
+			WebSearchRequests: 3,
+		},
 	}, 1.0, false)
 	if cost == nil {
 		t.Fatal("expected cost")
@@ -252,9 +256,11 @@ func TestCost_NoAudioPriceIgnoresAudioTokens(t *testing.T) {
 	}}
 	// Model has no audio pricing — audio tokens treated as regular text
 	cost := db.Cost("openai", "gpt-4", &wire.Result{
-		InputTokens:      1000,
-		OutputTokens:     500,
-		AudioInputTokens: 200,
+		InputTokens:  1000,
+		OutputTokens: 500,
+		Details: wire.OpenAIDetails{
+			AudioInputTokens: 200,
+		},
 	}, 1.0, false)
 	if cost == nil {
 		t.Fatal("expected cost")
@@ -369,9 +375,11 @@ func TestCost_WebSearchNotAffectedByMultiplier(t *testing.T) {
 	}}
 	// Web search cost should NOT be multiplied by fast mode
 	cost := db.Cost("anthropic", "claude-sonnet-4-6", &wire.Result{
-		InputTokens:       1000,
-		OutputTokens:      500,
-		WebSearchRequests: 2,
+		InputTokens:  1000,
+		OutputTokens: 500,
+		Details: wire.AnthropicDetails{
+			WebSearchRequests: 2,
+		},
 	}, 6.0, false)
 	if cost == nil {
 		t.Fatal("expected cost")
@@ -449,10 +457,12 @@ func TestCost_AudioWithCache(t *testing.T) {
 	// uncached = 1000 - 300 = 700
 	// text input = uncached - audio = 700 - 400 = 300
 	cost := db.Cost("openai", "gpt-4o-audio", &wire.Result{
-		InputTokens:      1000,
-		OutputTokens:     200,
-		CacheReadTokens:  300,
-		AudioInputTokens: 400,
+		InputTokens:     1000,
+		OutputTokens:    200,
+		CacheReadTokens: 300,
+		Details: wire.OpenAIDetails{
+			AudioInputTokens: 400,
+		},
 	}, 1.0, false)
 	if cost == nil {
 		t.Fatal("expected cost")
@@ -479,10 +489,12 @@ func TestCost_AudioExceedsUncached(t *testing.T) {
 	// Edge case: audio tokens > uncached portion (audio overlaps cached).
 	// 1000 total, 600 cached, 800 audio → uncached=400, textInput=max(0, 400-800)=0
 	cost := db.Cost("openai", "gpt-4o-audio", &wire.Result{
-		InputTokens:      1000,
-		OutputTokens:     100,
-		CacheReadTokens:  600,
-		AudioInputTokens: 800,
+		InputTokens:     1000,
+		OutputTokens:    100,
+		CacheReadTokens: 600,
+		Details: wire.OpenAIDetails{
+			AudioInputTokens: 800,
+		},
 	}, 1.0, false)
 	if cost == nil {
 		t.Fatal("expected cost")

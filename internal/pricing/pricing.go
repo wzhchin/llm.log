@@ -92,16 +92,27 @@ func (db *DB) Cost(providerName, model string, r *wire.Result, multiplier float6
 	textInput := uncached
 	textOutput := float64(r.OutputTokens)
 
+	// Extract provider-specific details for cost calculation.
+	var audioIn, audioOut int
+	var webSearches int
+	switch d := r.Details.(type) {
+	case wire.OpenAIDetails:
+		audioIn = d.AudioInputTokens
+		audioOut = d.AudioOutputTokens
+	case wire.AnthropicDetails:
+		webSearches = d.WebSearchRequests
+	}
+
 	// Separate audio tokens from text tokens (OpenAI audio models).
 	// Audio and cached tokens are disjoint subsets of prompt_tokens in OpenAI's API:
 	// prompt_tokens = text_tokens + audio_tokens, cached_tokens ⊆ prompt_tokens.
 	// When both are present, audio tokens reduce the uncached text portion.
 	// Ref: https://platform.openai.com/docs/guides/audio
-	if p.AudioInputPerMTok > 0 && r.AudioInputTokens > 0 {
-		textInput = max(0, uncached-float64(r.AudioInputTokens))
+	if p.AudioInputPerMTok > 0 && audioIn > 0 {
+		textInput = max(0, uncached-float64(audioIn))
 	}
-	if p.AudioOutputPerMTok > 0 && r.AudioOutputTokens > 0 {
-		textOutput = max(0, float64(r.OutputTokens-r.AudioOutputTokens))
+	if p.AudioOutputPerMTok > 0 && audioOut > 0 {
+		textOutput = max(0, float64(r.OutputTokens-audioOut))
 	}
 
 	// Cache write rate: 1h TTL uses 2x input instead of default 1.25x.
@@ -115,8 +126,8 @@ func (db *DB) Cost(providerName, model string, r *wire.Result, multiplier float6
 		textOutput*p.OutputPerMTok/1_000_000 +
 		float64(r.CacheReadTokens)*p.CacheReadPerMTok/1_000_000 +
 		float64(r.CacheWriteTokens)*cacheWriteRate/1_000_000 +
-		float64(r.AudioInputTokens)*p.AudioInputPerMTok/1_000_000 +
-		float64(r.AudioOutputTokens)*p.AudioOutputPerMTok/1_000_000
+		float64(audioIn)*p.AudioInputPerMTok/1_000_000 +
+		float64(audioOut)*p.AudioOutputPerMTok/1_000_000
 
 	// Apply request-level price multiplier. 1.0 = identity (no change).
 	if multiplier != 1.0 {
@@ -124,7 +135,7 @@ func (db *DB) Cost(providerName, model string, r *wire.Result, multiplier float6
 	}
 
 	// Web search is a flat per-request fee, not affected by token multipliers.
-	cost += float64(r.WebSearchRequests) * webSearchCostPerRequest
+	cost += float64(webSearches) * webSearchCostPerRequest
 
 	return &cost
 }

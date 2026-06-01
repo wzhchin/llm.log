@@ -28,15 +28,20 @@ func (r *responsesFormat) Parse(body []byte) (*Result, error) {
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
-	return &Result{
-		Model:             resp.Model,
-		InputTokens:       resp.Usage.InputTokens,
-		OutputTokens:      resp.Usage.OutputTokens,
-		CacheReadTokens:   resp.Usage.InputTokenDetails.CachedTokens,
-		AudioInputTokens:  resp.Usage.InputTokenDetails.AudioTokens,
-		AudioOutputTokens: resp.Usage.OutputTokenDetails.AudioTokens,
-		ResponseBody:      body,
-	}, nil
+	result := &Result{
+		Model:           resp.Model,
+		InputTokens:     resp.Usage.InputTokens,
+		OutputTokens:    resp.Usage.OutputTokens,
+		CacheReadTokens: resp.Usage.InputTokenDetails.CachedTokens,
+		ResponseBody:    body,
+	}
+	if resp.Usage.InputTokenDetails.AudioTokens > 0 || resp.Usage.OutputTokenDetails.AudioTokens > 0 {
+		result.Details = OpenAIDetails{
+			AudioInputTokens:  resp.Usage.InputTokenDetails.AudioTokens,
+			AudioOutputTokens: resp.Usage.OutputTokenDetails.AudioTokens,
+		}
+	}
+	return result, nil
 }
 
 func (r *responsesFormat) ParseStream(events []SSEEvent) (*Result, error) {
@@ -66,8 +71,12 @@ func (r *responsesFormat) ParseStream(events []SSEEvent) (*Result, error) {
 				result.InputTokens = u.InputTokens
 				result.OutputTokens = u.OutputTokens
 				result.CacheReadTokens = u.InputTokenDetails.CachedTokens
-				result.AudioInputTokens = u.InputTokenDetails.AudioTokens
-				result.AudioOutputTokens = u.OutputTokenDetails.AudioTokens
+				if u.InputTokenDetails.AudioTokens > 0 || u.OutputTokenDetails.AudioTokens > 0 {
+					result.Details = OpenAIDetails{
+						AudioInputTokens:  u.InputTokenDetails.AudioTokens,
+						AudioOutputTokens: u.OutputTokenDetails.AudioTokens,
+					}
+				}
 			}
 		}
 	}

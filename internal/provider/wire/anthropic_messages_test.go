@@ -65,7 +65,8 @@ func TestAnthropicMessages_Parse_FastMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !r.FastMode {
+	d, ok := r.Details.(AnthropicDetails)
+	if !ok || !d.FastMode {
 		t.Error("FastMode should be true when speed=fast")
 	}
 }
@@ -84,7 +85,7 @@ func TestAnthropicMessages_Parse_StandardSpeed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.FastMode {
+	if d, ok := r.Details.(AnthropicDetails); ok && d.FastMode {
 		t.Error("FastMode should be false when speed=standard")
 	}
 }
@@ -105,8 +106,12 @@ func TestAnthropicMessages_Parse_WebSearch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.WebSearchRequests != 3 {
-		t.Errorf("web search = %d, want 3", r.WebSearchRequests)
+	d, ok := r.Details.(AnthropicDetails)
+	if !ok {
+		t.Fatal("expected AnthropicDetails")
+	}
+	if d.WebSearchRequests != 3 {
+		t.Errorf("web search = %d, want 3", d.WebSearchRequests)
 	}
 	if r.InputTokens != 500 {
 		t.Errorf("input = %d, want 500", r.InputTokens)
@@ -159,8 +164,12 @@ func TestAnthropicMessages_ParseStream_WebSearch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.WebSearchRequests != 2 {
-		t.Errorf("web search = %d, want 2", r.WebSearchRequests)
+	d, ok := r.Details.(AnthropicDetails)
+	if !ok {
+		t.Fatal("expected AnthropicDetails")
+	}
+	if d.WebSearchRequests != 2 {
+		t.Errorf("web search = %d, want 2", d.WebSearchRequests)
 	}
 	if r.OutputTokens != 10 {
 		t.Errorf("output = %d, want 10", r.OutputTokens)
@@ -177,7 +186,8 @@ func TestAnthropicMessages_ParseStream_FastMode_MessageDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !r.FastMode {
+	d, ok := r.Details.(AnthropicDetails)
+	if !ok || !d.FastMode {
 		t.Error("FastMode should be true when speed=fast in message_delta")
 	}
 }
@@ -193,7 +203,8 @@ func TestAnthropicMessages_ParseStream_FastMode_MessageStart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !r.FastMode {
+	d, ok := r.Details.(AnthropicDetails)
+	if !ok || !d.FastMode {
 		t.Error("FastMode should be true when speed=fast in message_start")
 	}
 }

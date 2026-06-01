@@ -107,16 +107,21 @@ func parseCCResponse(body []byte, mapUsage usageMapper) (*Result, error) {
 		return nil, err
 	}
 	u := mapUsage(resp.Usage)
-	return &Result{
-		Model:             resp.Model,
-		InputTokens:       u.input,
-		OutputTokens:      u.output,
-		CacheReadTokens:   u.cacheRead,
-		CacheWriteTokens:  u.cacheWrite,
-		AudioInputTokens:  u.audioInput,
-		AudioOutputTokens: u.audioOutput,
-		ResponseBody:      body,
-	}, nil
+	r := &Result{
+		Model:            resp.Model,
+		InputTokens:      u.input,
+		OutputTokens:     u.output,
+		CacheReadTokens:  u.cacheRead,
+		CacheWriteTokens: u.cacheWrite,
+		ResponseBody:     body,
+	}
+	if u.audioInput > 0 || u.audioOutput > 0 {
+		r.Details = OpenAIDetails{
+			AudioInputTokens:  u.audioInput,
+			AudioOutputTokens: u.audioOutput,
+		}
+	}
+	return r, nil
 }
 
 // parseCCStream parses a streaming Chat Completions-style response.
@@ -156,8 +161,12 @@ func parseCCStream(events []SSEEvent, mapUsage usageMapper) (*Result, error) {
 				result.OutputTokens = u.output
 				result.CacheReadTokens = u.cacheRead
 				result.CacheWriteTokens = u.cacheWrite
-				result.AudioInputTokens = u.audioInput
-				result.AudioOutputTokens = u.audioOutput
+				if u.audioInput > 0 || u.audioOutput > 0 {
+					result.Details = OpenAIDetails{
+						AudioInputTokens:  u.audioInput,
+						AudioOutputTokens: u.audioOutput,
+					}
+				}
 			}
 		}
 	}

@@ -328,7 +328,7 @@ func (p *Proxy) save(state *requestState, statusCode int, streaming bool, result
 		multiplier, cacheTTL1h = detectAnthropicModifiers(state, result)
 		// Fast mode: detected from response (usage.speed == "fast").
 		// Ref: https://platform.claude.com/docs/en/build-with-claude/fast-mode
-		if result.FastMode {
+		if d, ok := result.Details.(wire.AnthropicDetails); ok && d.FastMode {
 			multiplier *= 6.0
 		}
 	}

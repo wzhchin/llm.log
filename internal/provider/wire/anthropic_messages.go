@@ -41,14 +41,16 @@ func (a *anthropicMessages) Parse(body []byte) (*Result, error) {
 	}
 	u := resp.Usage
 	return &Result{
-		Model:             resp.Model,
-		InputTokens:       u.InputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens,
-		OutputTokens:      u.OutputTokens,
-		CacheReadTokens:   u.CacheReadInputTokens,
-		CacheWriteTokens:  u.CacheCreationInputTokens,
-		WebSearchRequests: u.ServerToolUse.WebSearchRequests,
-		FastMode:          u.Speed == "fast",
-		ResponseBody:      body,
+		Model:            resp.Model,
+		InputTokens:      u.InputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens,
+		OutputTokens:     u.OutputTokens,
+		CacheReadTokens:  u.CacheReadInputTokens,
+		CacheWriteTokens: u.CacheCreationInputTokens,
+		Details: AnthropicDetails{
+			WebSearchRequests: u.ServerToolUse.WebSearchRequests,
+			FastMode:          u.Speed == "fast",
+		},
+		ResponseBody: body,
 	}, nil
 }
 
@@ -60,6 +62,7 @@ func (a *anthropicMessages) Parse(body []byte) (*Result, error) {
 func (a *anthropicMessages) ParseStream(events []SSEEvent) (*Result, error) {
 	var result Result
 	var content strings.Builder
+	var details AnthropicDetails
 
 	for _, ev := range events {
 		switch ev.Event {
@@ -82,7 +85,7 @@ func (a *anthropicMessages) ParseStream(events []SSEEvent) (*Result, error) {
 				result.CacheWriteTokens = u.CacheCreationInputTokens
 				result.InputTokens = u.InputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens
 				if u.Speed == "fast" {
-					result.FastMode = true
+					details.FastMode = true
 				}
 			}
 
@@ -110,15 +113,18 @@ func (a *anthropicMessages) ParseStream(events []SSEEvent) (*Result, error) {
 			if json.Unmarshal(ev.Data, &delta) == nil {
 				result.OutputTokens = delta.Usage.OutputTokens
 				if delta.Usage.Speed == "fast" {
-					result.FastMode = true
+					details.FastMode = true
 				}
 				if delta.Usage.ServerToolUse.WebSearchRequests > 0 {
-					result.WebSearchRequests = delta.Usage.ServerToolUse.WebSearchRequests
+					details.WebSearchRequests = delta.Usage.ServerToolUse.WebSearchRequests
 				}
 			}
 		}
 	}
 
 	result.ResponseBody = reconstructStreamBody(result.Model, content.String())
+	if details != (AnthropicDetails{}) {
+		result.Details = details
+	}
 	return &result, nil
 }
