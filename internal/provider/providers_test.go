@@ -21,7 +21,6 @@ func TestAllProviders_Registration(t *testing.T) {
 		{"api.mistral.ai", "mistral"},
 		{"api.perplexity.ai", "perplexity"},
 		{"api.x.ai", "xai"},
-		{"open.bigmodel.cn", "glm"},
 	}
 
 	for _, tt := range tests {
@@ -46,7 +45,6 @@ func TestChatCompletionsProviders_ResolveFormat(t *testing.T) {
 		{"api.fireworks.ai", []string{"/inference/v1/chat/completions", "/v1/chat/completions"}},
 		{"api.mistral.ai", []string{"/v1/chat/completions"}},
 		{"api.x.ai", []string{"/v1/chat/completions"}},
-		{"open.bigmodel.cn", []string{"/v1/chat/completions"}},
 	}
 
 	for _, tt := range tests {

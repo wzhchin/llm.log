@@ -45,7 +45,7 @@ func Lookup(domain string) (Provider, bool) {
 func RegisterCustom(cfg *config.Config) error {
 	var firstErr error
 	for _, c := range cfg.Custom {
-		f, err := config.ParseFormat(c.Format)
+		fmts, err := config.ParseFormats(c.Formats)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("custom provider %q: %w", c.Name, err)
@@ -55,7 +55,7 @@ func RegisterCustom(cfg *config.Config) error {
 		Register(&customProvider{
 			name:    c.Name,
 			domain:  c.Domain,
-			formats: []wire.Format{f},
+			formats: fmts,
 		})
 	}
 	return firstErr
