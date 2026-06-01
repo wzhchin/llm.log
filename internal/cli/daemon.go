@@ -8,9 +8,11 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/lanesket/llm.log/internal/config"
 	"github.com/lanesket/llm.log/internal/daemon"
 	"github.com/lanesket/llm.log/internal/format"
 	"github.com/lanesket/llm.log/internal/pricing"
+	"github.com/lanesket/llm.log/internal/provider"
 	"github.com/lanesket/llm.log/internal/proxy"
 	"github.com/lanesket/llm.log/internal/storage"
 	"github.com/spf13/cobra"
@@ -186,6 +188,14 @@ var runCmd = &cobra.Command{
 		priceDB := pricing.NewDB(dir)
 		go priceDB.UpdateIfStale()
 		priceDB.StartAutoUpdate()
+
+		// Load custom providers from config
+		cfg, err := config.Load(dir)
+		if err != nil {
+			log.Printf("warning: config: %v", err)
+		} else if err := provider.RegisterCustom(cfg); err != nil {
+			log.Printf("warning: custom providers: %v", err)
+		}
 
 		// Create proxy
 		p, err := proxy.New(proxyAddr, dir, store, priceDB)

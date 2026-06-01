@@ -1,13 +1,18 @@
 package provider
 
-import "github.com/lanesket/llm.log/internal/provider/wire"
+import (
+	"fmt"
+
+	"github.com/lanesket/llm.log/internal/config"
+	"github.com/lanesket/llm.log/internal/provider/wire"
+)
 
 // Provider maps a domain to its supported API formats.
 // Formats are listed most-specific first; the last one is the default fallback.
 type Provider interface {
 	Name() string
 	Domains() []string
-	Formats() []wire.Format
+	 Formats() []wire.Format
 }
 
 // ResolveFormat finds the matching format for a request path.
@@ -34,3 +39,35 @@ func Lookup(domain string) (Provider, bool) {
 	p, ok := providers[domain]
 	return p, ok
 }
+
+// RegisterCustom registers custom providers from config.
+// Returns the first error encountered; already-registered entries remain.
+func RegisterCustom(cfg *config.Config) error {
+	var firstErr error
+	for _, c := range cfg.Custom {
+		f, err := config.ParseFormat(c.Format)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("custom provider %q: %w", c.Name, err)
+			}
+			continue
+		}
+		Register(&customProvider{
+			name:    c.Name,
+			domain:  c.Domain,
+			formats: []wire.Format{f},
+		})
+	}
+	return firstErr
+}
+
+// customProvider implements Provider for user-configured endpoints.
+type customProvider struct {
+	name    string
+	domain  string
+	formats []wire.Format
+}
+
+func (cp *customProvider) Name() string           { return cp.name }
+func (cp *customProvider) Domains() []string      { return []string{cp.domain} }
+func (cp *customProvider) Formats() []wire.Format { return cp.formats }
