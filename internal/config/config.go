@@ -11,14 +11,27 @@ import (
 
 // CustomProvider defines a user-configured LLM API endpoint.
 type CustomProvider struct {
-	Name    string   `yaml:"name"`
-	Domain  string   `yaml:"domain"`
-	Formats []string `yaml:"formats"`
+	Name        string            `yaml:"name"`
+	Domain      string            `yaml:"domain"`
+	Formats     []string          `yaml:"formats"`
+	UsageFields map[string]string `yaml:"usage_fields"`
 }
 
 func (c *CustomProvider) validate() error {
 	if len(c.Formats) == 0 {
 		return fmt.Errorf("formats is required")
+	}
+	if len(c.UsageFields) > 0 {
+		hasCC := false
+		for _, f := range c.Formats {
+			if f == "chat_completions" {
+				hasCC = true
+				break
+			}
+		}
+		if !hasCC {
+			return fmt.Errorf("usage_fields requires chat_completions format")
+		}
 	}
 	return nil
 }
@@ -26,6 +39,7 @@ func (c *CustomProvider) validate() error {
 // Config holds all user configuration loaded from config.yaml.
 type Config struct {
 	Custom []CustomProvider `yaml:"custom"`
+	RawLog bool             `yaml:"raw_log"`
 }
 
 // Load reads config.yaml from the data directory.

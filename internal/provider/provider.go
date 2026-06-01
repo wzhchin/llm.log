@@ -52,6 +52,15 @@ func RegisterCustom(cfg *config.Config) error {
 			}
 			continue
 		}
+		// When usage_fields is set, replace chat_completions with a
+		// dynamically-mapped variant.
+		if len(c.UsageFields) > 0 {
+			for i, f := range fmts {
+				if f == wire.ChatCompletions {
+					fmts[i] = wire.NewCCFormatFromFields("/chat/completions", c.UsageFields)
+				}
+			}
+		}
 		Register(&customProvider{
 			name:    c.Name,
 			domain:  c.Domain,

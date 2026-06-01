@@ -12,6 +12,7 @@ completions/
 .DS_Store
 
 .claude/settings.local.json
+.claude/worktrees
 
 # Web UI
 web/node_modules/

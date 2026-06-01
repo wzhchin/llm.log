@@ -15,6 +15,7 @@ import (
 	"github.com/lanesket/llm.log/internal/format"
 	"github.com/lanesket/llm.log/internal/provider"
 	"github.com/lanesket/llm.log/internal/provider/wire"
+	"github.com/lanesket/llm.log/internal/rawlog"
 	"github.com/lanesket/llm.log/internal/storage"
 )
 
@@ -30,6 +31,7 @@ type Proxy struct {
 	server       *http.Server
 	store        storage.Store
 	price        PriceLookup
+	rawlog       *rawlog.Logger
 	saveQueue    chan *storage.Record
 	stop         chan struct{}
 	stopped      chan struct{}
@@ -46,7 +48,7 @@ type PriceLookup interface {
 }
 
 // New creates a new proxy server.
-func New(addr, dataDir string, store storage.Store, price PriceLookup) (*Proxy, error) {
+func New(addr, dataDir string, store storage.Store, price PriceLookup, rl *rawlog.Logger) (*Proxy, error) {
 	tlsCert, err := LoadOrGenerateCA(dataDir)
 	if err != nil {
 		return nil, err
@@ -72,6 +74,7 @@ func New(addr, dataDir string, store storage.Store, price PriceLookup) (*Proxy, 
 		server:       &http.Server{Addr: addr, Handler: gp},
 		store:        store,
 		price:        price,
+		rawlog:       rl,
 		saveQueue:    make(chan *storage.Record, saveQueueSize),
 		stop:         make(chan struct{}),
 		stopped:      make(chan struct{}),
@@ -226,13 +229,23 @@ func (p *Proxy) onRequest(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Reque
 		modified = body
 	}
 
+	now := time.Now()
+
+	// Start raw log entry
+	var rawEntry *rawlog.Entry
+	if p.rawlog != nil {
+		rawEntry = p.rawlog.NewEntry(now)
+		rawEntry.Request(req.Method, req.URL.String(), req.Header, body)
+	}
+
 	ctx.UserData = &requestState{
 		provider:    prov,
 		format:      format,
 		requestBody: body,
-		startTime:   time.Now(),
+		startTime:   now,
 		endpoint:    req.URL.Path,
 		source:      detectSource(req.Header),
+		rawEntry:    rawEntry,
 	}
 
 	req.Body = io.NopCloser(bytes.NewReader(modified))
@@ -250,13 +263,18 @@ func (p *Proxy) onResponse(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Res
 	if strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
 		// Tee: client reads streaming chunks in real-time, we accumulate for parsing
 		statusCode := resp.StatusCode
+		respHeaders := cloneHeaders(resp.Header)
 		resp.Body = &teeReadCloser{
 			rc: resp.Body,
 			done: func(raw []byte) {
+				// Raw log: write accumulated streaming response
+				state.rawEntry.Response(statusCode, respHeaders, raw)
+
 				events := ParseSSE(raw)
 				result, err := state.format.ParseStream(events)
 				if err != nil {
 					log.Printf("parse error (%s): %v", state.provider.Name(), err)
+					state.rawEntry.Error(err.Error())
 					p.save(state, statusCode, true, &wire.Result{ResponseBody: raw})
 					return
 				}
@@ -271,13 +289,19 @@ func (p *Proxy) onResponse(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Res
 	resp.Body.Close()
 	if err != nil {
 		log.Printf("error reading response: %v", err)
+		state.rawEntry.Error(err.Error())
+		state.rawEntry.End(resp.StatusCode, false, time.Since(state.startTime))
 		return resp
 	}
 	resp.Body = io.NopCloser(bytes.NewReader(body))
 
+	// Raw log: write non-streaming response
+	state.rawEntry.Response(resp.StatusCode, resp.Header, body)
+
 	result, err := state.format.Parse(body)
 	if err != nil {
 		log.Printf("parse error (%s): %v", state.provider.Name(), err)
+		state.rawEntry.Error(err.Error())
 		p.save(state, resp.StatusCode, false, &wire.Result{ResponseBody: body})
 		return resp
 	}
@@ -292,6 +316,8 @@ func (p *Proxy) save(state *requestState, statusCode int, streaming bool, result
 		result.Model = extractModelFromRequest(state.requestBody)
 	}
 	if result.Model == "" {
+		// Can't save to DB without model, but still flush raw log
+		state.rawEntry.End(statusCode, streaming, time.Since(state.startTime))
 		return
 	}
 
@@ -341,6 +367,9 @@ func (p *Proxy) save(state *requestState, statusCode int, streaming bool, result
 	log.Printf("%-10s %-25s %6d in / %6d out  %s",
 		rec.Provider, rec.Model, rec.InputTokens, rec.OutputTokens, costStr)
 
+	// Raw log: write END summary and flush to disk
+	state.rawEntry.End(statusCode, streaming, duration)
+
 	select {
 	case p.saveQueue <- rec:
 	default:
@@ -355,6 +384,7 @@ type requestState struct {
 	startTime   time.Time
 	endpoint    string
 	source      string
+	rawEntry    *rawlog.Entry
 }
 
 // detectSource identifies the client from the User-Agent header.
@@ -513,6 +543,18 @@ func extractModelFromRequest(body []byte) string {
 		return req.Model
 	}
 	return ""
+}
+
+// cloneHeaders copies an http.Header map so it can be used after the
+// original response is forwarded and its headers are no longer reachable.
+func cloneHeaders(h http.Header) http.Header {
+	c := make(http.Header, len(h))
+	for k, vs := range h {
+		vs2 := make([]string, len(vs))
+		copy(vs2, vs)
+		c[k] = vs2
+	}
+	return c
 }
 
 func hostWithoutPort(host string) string {

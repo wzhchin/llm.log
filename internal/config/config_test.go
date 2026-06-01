@@ -174,3 +174,29 @@ func TestParseFormats(t *testing.T) {
 		t.Errorf("formats[1] = %T, want Responses", fmts[1])
 	}
 }
+
+func TestLoad_RawLog(t *testing.T) {
+	dir := t.TempDir()
+	content := "raw_log: true\n"
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.RawLog {
+		t.Error("RawLog should be true")
+	}
+}
+
+func TestLoad_RawLogDefault(t *testing.T) {
+	dir := t.TempDir()
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.RawLog {
+		t.Error("RawLog should default to false")
+	}
+}

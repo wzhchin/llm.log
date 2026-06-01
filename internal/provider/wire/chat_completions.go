@@ -166,6 +166,68 @@ func parseCCStream(events []SSEEvent, mapUsage usageMapper) (*Result, error) {
 	return &result, nil
 }
 
+// NewCCFormatFromFields creates a Chat Completions Format with a dynamic
+// usageMapper built from user-configured field mappings.
+// Keys are logical names (input, output, cache_read, cache_write, audio_input,
+// audio_output); values are dot-separated JSON paths within the usage object.
+func NewCCFormatFromFields(pathSuffix string, fields map[string]string) Format {
+	return NewCCFormat(pathSuffix, dynamicUsage(fields))
+}
+
+// dynamicUsage builds a usageMapper from a field→path mapping.
+// Dot-separated paths walk nested JSON objects (e.g. "prompt_tokens_details.cached_tokens").
+// Missing paths default to 0, matching existing usageMapper behavior.
+func dynamicUsage(fields map[string]string) usageMapper {
+	return func(raw json.RawMessage) ccUsage {
+		// Parse the usage object into a generic map for path walking.
+		var obj map[string]any
+		if json.Unmarshal(raw, &obj) != nil {
+			return ccUsage{}
+		}
+		return ccUsage{
+			input:       jsonInt(walkPath(obj, fields["input"])),
+			output:      jsonInt(walkPath(obj, fields["output"])),
+			cacheRead:   jsonInt(walkPath(obj, fields["cache_read"])),
+			cacheWrite:  jsonInt(walkPath(obj, fields["cache_write"])),
+			audioInput:  jsonInt(walkPath(obj, fields["audio_input"])),
+			audioOutput: jsonInt(walkPath(obj, fields["audio_output"])),
+		}
+	}
+}
+
+// walkPath traverses a nested map by dot-separated path (e.g. "a.b.c").
+// Returns nil if any segment is missing or not a map.
+func walkPath(obj map[string]any, path string) any {
+	if path == "" {
+		return nil
+	}
+	parts := strings.Split(path, ".")
+	var cur any = obj
+	for _, p := range parts {
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return nil
+		}
+		cur = m[p]
+		if cur == nil {
+			return nil
+		}
+	}
+	return cur
+}
+
+// jsonInt converts a JSON number (float64 from encoding/json) to int.
+func jsonInt(v any) int {
+	if v == nil {
+		return 0
+	}
+	f, ok := v.(float64)
+	if !ok {
+		return 0
+	}
+	return int(f)
+}
+
 // injectStreamUsage adds stream_options.include_usage to streaming requests.
 // Shared by all Chat Completions-compatible formats.
 func injectStreamUsage(body []byte) ([]byte, error) {
