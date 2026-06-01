@@ -20,6 +20,12 @@ var DeepSeekChatCompletions Format = NewCCFormat("/chat/completions", deepseekUs
 // Spec: https://docs.perplexity.ai/api-reference/sonar-post
 var PerplexitySonar Format = NewCCFormat("/sonar", openaiUsage)
 
+// GLMChatCompletions parses the GLM Chat Completions format.
+// Used by: Zhipu/GLM (智谱). Uses standard OpenAI usage fields
+// (prompt_tokens_details.cached_tokens, completion_tokens_details.reasoning_tokens).
+// Spec: https://open.bigmodel.cn/dev/api
+var GLMChatCompletions Format = NewCCFormat("/chat/completions", openaiUsage)
+
 // NewCCFormat creates a Chat Completions-compatible Format with a custom
 // path suffix and usage mapper. This is the extension point for adding
 // new providers that use Chat Completions with different usage fields.
