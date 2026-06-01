@@ -17,4 +17,3 @@ completions/
 # Web UI
 web/node_modules/
 web/dist/
-!web/dist/index.html
