@@ -3,7 +3,7 @@ import { ArrowUpIcon, ArrowDownIcon, ExternalLinkIcon, Loader2Icon, ChevronLeftI
 import { CopyableValue } from '@/components/CopyableValue';
 import { DateRangePicker } from '@/components/DateRangePicker';
 import { FilterBar } from '@/components/FilterBar';
-import { JsonViewer } from '@/components/JsonViewer';
+import { StructuredView } from '@/components/structured/StructuredView';
 import { EmptyState } from '@/components/EmptyState';
 import { useTimeRange } from '@/hooks/useTimeRange';
 import { useFilters } from '@/hooks/useFilters';
@@ -18,7 +18,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import type { RequestItem, RequestDetailResponse } from '@/lib/types';
 
 const COLUMNS = [
@@ -146,21 +145,20 @@ function DetailContent({
         </div>
       </div>
 
-      {/* Scrollable body tabs */}
+      {/* Scrollable body — structured view */}
       <div className="flex-1 overflow-y-auto p-4 pt-0">
         <div className="mt-4">
-          <Tabs defaultValue="request">
-            <TabsList>
-              <TabsTrigger value="request">Request</TabsTrigger>
-              <TabsTrigger value="response">Response</TabsTrigger>
-            </TabsList>
-            <TabsContent value="request" className="mt-3">
-              <JsonViewer data={detail.request_body || '{}'} />
-            </TabsContent>
-            <TabsContent value="response" className="mt-3">
-              <JsonViewer data={detail.response_body || '{}'} />
-            </TabsContent>
-          </Tabs>
+          <StructuredView
+            requestBody={detail.request_body}
+            responseBody={detail.response_body}
+            endpoint={detail.endpoint}
+            inputTokens={detail.input_tokens}
+            outputTokens={detail.output_tokens}
+            cacheReadTokens={detail.cache_read_tokens}
+            cacheWriteTokens={detail.cache_write_tokens}
+            totalCost={detail.total_cost}
+            durationMs={detail.duration_ms}
+          />
         </div>
       </div>
     </div>
@@ -438,7 +436,7 @@ export function Requests() {
       {viewMode === 'split' && (
         <div className="flex gap-0 h-[calc(100vh-12rem)] -m-6 lg:-m-8 p-6 lg:p-8">
           {/* Left panel — compact list */}
-          <div className="flex flex-col w-2/5 min-w-0 border-r border-[var(--color-separator)]">
+          <div className="flex flex-col w-1/4 min-w-0 border-r border-[var(--color-separator)]">
             {/* List header */}
             <div className="flex-none flex items-center justify-between px-3 py-2 border-b border-[var(--color-separator)]">
               <span className="text-sm font-medium text-foreground">Requests</span>
