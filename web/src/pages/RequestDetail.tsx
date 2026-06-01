@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import { Loader2Icon } from 'lucide-react';
 import { CopyableValue } from '@/components/CopyableValue';
 import { fetchRequestDetail } from '@/lib/api';
-import { formatCost, formatTokens, formatDuration, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/EmptyState';
 import { JsonViewer } from '@/components/JsonViewer';
+import { StructuredView } from '@/components/structured/StructuredView';
 import type { RequestDetailResponse } from '@/lib/types';
 
 function StatusBadge({ code }: { code: number }) {
@@ -112,26 +113,8 @@ export default function RequestDetail() {
         <span className="text-sm text-[var(--color-text-secondary)]">{formatDate(data.timestamp)}</span>
       </div>
 
-      {/* Inline metrics strip */}
-      <div className="mt-6 flex flex-wrap items-baseline gap-x-4 gap-y-2">
-        {[
-          { label: 'Input', value: formatTokens(data.input_tokens) },
-          { label: 'Output', value: formatTokens(data.output_tokens) },
-          { label: 'Cache Read', value: formatTokens(data.cache_read_tokens) },
-          { label: 'Cache Write', value: formatTokens(data.cache_write_tokens) },
-          { label: 'Cost', value: formatCost(data.total_cost) },
-          { label: 'Duration', value: formatDuration(data.duration_ms) },
-        ].map((m, i, arr) => (
-          <div key={m.label} className="flex items-baseline gap-1.5">
-            <span className="text-[var(--text-micro)] uppercase tracking-wide text-[var(--color-text-tertiary)]">{m.label}</span>
-            <span className="text-[var(--text-body)] font-medium text-foreground tabular-nums">{m.value}</span>
-            {i < arr.length - 1 && <span className="hidden sm:inline text-[var(--color-separator)] ml-2">|</span>}
-          </div>
-        ))}
-      </div>
-
-      {/* Metadata — copyable */}
-      <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--color-text-secondary)]">
+      {/* Metadata */}
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--color-text-secondary)]">
         <div className="flex items-baseline gap-1.5">
           <span className="text-[var(--color-text-tertiary)]">Endpoint</span>
           <CopyableValue value={data.endpoint} className="text-sm text-foreground" mono />
@@ -146,35 +129,58 @@ export default function RequestDetail() {
         </div>
       </div>
 
-      {/* Body section - tabs for mobile, two columns for desktop */}
+      {/* Body section — tab between Structured View and Raw JSON */}
       <div className="mt-6">
-        {/* Desktop: two columns */}
-        <div className="hidden lg:grid lg:grid-cols-2 gap-4">
-          <div className="min-h-[400px]">
-            <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Request Body</h3>
-            <JsonViewer data={data.request_body} />
-          </div>
-          <div className="min-h-[400px]">
-            <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Response Body</h3>
-            <JsonViewer data={data.response_body} />
-          </div>
-        </div>
+        <Tabs defaultValue="structured">
+          <TabsList>
+            <TabsTrigger value="structured">Structured View</TabsTrigger>
+            <TabsTrigger value="raw">Raw JSON</TabsTrigger>
+          </TabsList>
 
-        {/* Mobile: tabs */}
-        <div className="lg:hidden">
-          <Tabs defaultValue="request">
-            <TabsList>
-              <TabsTrigger value="request">Request Body</TabsTrigger>
-              <TabsTrigger value="response">Response Body</TabsTrigger>
-            </TabsList>
-            <TabsContent value="request" className="mt-2 min-h-[400px]">
-              <JsonViewer data={data.request_body} />
-            </TabsContent>
-            <TabsContent value="response" className="mt-2 min-h-[400px]">
-              <JsonViewer data={data.response_body} />
-            </TabsContent>
-          </Tabs>
-        </div>
+          <TabsContent value="structured" className="mt-4">
+            <StructuredView
+              requestBody={data.request_body}
+              responseBody={data.response_body}
+              endpoint={data.endpoint}
+              inputTokens={data.input_tokens}
+              outputTokens={data.output_tokens}
+              cacheReadTokens={data.cache_read_tokens}
+              cacheWriteTokens={data.cache_write_tokens}
+              totalCost={data.total_cost}
+              durationMs={data.duration_ms}
+            />
+          </TabsContent>
+
+          <TabsContent value="raw" className="mt-4">
+            {/* Desktop: two columns */}
+            <div className="hidden lg:grid lg:grid-cols-2 gap-4">
+              <div className="min-h-[400px]">
+                <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Request Body</h3>
+                <JsonViewer data={data.request_body} />
+              </div>
+              <div className="min-h-[400px]">
+                <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Response Body</h3>
+                <JsonViewer data={data.response_body} />
+              </div>
+            </div>
+
+            {/* Mobile: tabs */}
+            <div className="lg:hidden">
+              <Tabs defaultValue="request">
+                <TabsList>
+                  <TabsTrigger value="request">Request Body</TabsTrigger>
+                  <TabsTrigger value="response">Response Body</TabsTrigger>
+                </TabsList>
+                <TabsContent value="request" className="mt-2 min-h-[400px]">
+                  <JsonViewer data={data.request_body} />
+                </TabsContent>
+                <TabsContent value="response" className="mt-2 min-h-[400px]">
+                  <JsonViewer data={data.response_body} />
+                </TabsContent>
+              </Tabs>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
