@@ -1,15 +1,8 @@
-import { useTimeRange, type Preset } from '@/hooks/useTimeRange';
-import { Button } from '@/components/ui/button';
+import { useTimeRange } from '@/hooks/useTimeRange';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@base-ui/react/slider';
 
-const presets: { label: string; value: Preset }[] = [
-  { label: '1h', value: '1h' },
-  { label: 'Today', value: 'today' },
-  { label: 'Yesterday', value: 'yesterday' },
-  { label: '7d', value: '7d' },
-  { label: '30d', value: '30d' },
-  { label: 'Custom', value: 'custom' },
-];
+const MAX_LOOKBACK_MINUTES = 30 * 24 * 60; // 30 days
 
 function toLocalDatetime(iso: string): string {
   if (!iso) return '';
@@ -19,53 +12,64 @@ function toLocalDatetime(iso: string): string {
 }
 
 export function DateRangePicker() {
-  const { range, setPreset, setCustom } = useTimeRange();
+  const { range, setCustom } = useTimeRange();
+
+  const now = Date.now();
+  const fromMs = new Date(range.from).getTime();
+  const toMs = new Date(range.to).getTime();
+
+  // Slider value: minutes-ago from now (0 = now, higher = further back)
+  const fromAgo = Math.round((now - fromMs) / 60000);
+  const toAgo = Math.round((now - toMs) / 60000);
+
+  const handleSliderChange = (value: number | number[]) => {
+    const [lo, hi] = value as number[];
+    // lo = closer to now (to), hi = further back (from)
+    const newFrom = new Date(now - hi * 60000).toISOString();
+    const newTo = new Date(now - lo * 60000).toISOString();
+    setCustom(newFrom, newTo);
+  };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex gap-1">
-        {presets.map((p) => (
-          <Button
-            key={p.value}
-            variant={range.preset === p.value ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => {
-              if (p.value !== 'custom') {
-                setPreset(p.value);
-              } else {
-                setCustom(range.from, range.to);
-              }
-            }}
-          >
-            {p.label}
-          </Button>
-        ))}
+    <div className="flex items-center gap-3">
+      <Slider.Root
+        value={[toAgo, fromAgo]}
+        onValueChange={handleSliderChange}
+        min={0}
+        max={MAX_LOOKBACK_MINUTES}
+        step={60}
+        className="relative flex w-44 items-center h-5 touch-none select-none"
+      >
+        <Slider.Track className="relative h-1 w-full rounded-full bg-[var(--bg-3)]">
+          <Slider.Indicator className="absolute h-full rounded-full bg-[var(--c-amber)]" />
+        </Slider.Track>
+        <Slider.Thumb className="block size-3 rounded-full bg-[var(--c-amber)] shadow-sm border border-[var(--border-0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-amber-dim)]/50" />
+        <Slider.Thumb className="block size-3 rounded-full bg-[var(--c-amber)] shadow-sm border border-[var(--border-0)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-amber-dim)]/50" />
+      </Slider.Root>
+
+      <div className="flex items-center gap-1.5">
+        <Input
+          type="datetime-local"
+          aria-label="Start date"
+          value={toLocalDatetime(range.from)}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val) setCustom(new Date(val).toISOString(), range.to);
+          }}
+          className="h-6 w-auto text-[11px] font-mono"
+        />
+        <span className="text-[var(--text-2)] text-[11px]">→</span>
+        <Input
+          type="datetime-local"
+          aria-label="End date"
+          value={toLocalDatetime(range.to)}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val) setCustom(range.from, new Date(val).toISOString());
+          }}
+          className="h-6 w-auto text-[11px] font-mono"
+        />
       </div>
-      {range.preset === 'custom' && (
-        <div className="flex items-center gap-2">
-          <Input
-            type="datetime-local"
-            aria-label="Start date"
-            value={toLocalDatetime(range.from)}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val) setCustom(new Date(val).toISOString(), range.to);
-            }}
-            className="h-7 w-auto text-xs"
-          />
-          <span className="text-[var(--color-text-secondary)] text-xs">to</span>
-          <Input
-            type="datetime-local"
-            aria-label="End date"
-            value={toLocalDatetime(range.to)}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val) setCustom(range.from, new Date(val).toISOString());
-            }}
-            className="h-7 w-auto text-xs"
-          />
-        </div>
-      )}
     </div>
   );
 }

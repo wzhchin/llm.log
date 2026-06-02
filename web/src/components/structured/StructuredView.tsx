@@ -20,9 +20,7 @@ export function StructuredView({
   inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens,
   totalCost, durationMs,
 }: StructuredViewProps) {
-  const [globalMarkdown, setGlobalMarkdown] = useState(true);
   const [collapsedBoxes, setCollapsedBoxes] = useState<Set<string>>(new Set());
-  const [boxRawOverrides, setBoxRawOverrides] = useState<Set<string>>(new Set());
 
   const parsed = useMemo(() => {
     return parseBodies(requestBody, responseBody, endpoint);
@@ -30,15 +28,6 @@ export function StructuredView({
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsedBoxes(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const toggleBoxRaw = useCallback((id: string) => {
-    setBoxRawOverrides(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -58,31 +47,6 @@ export function StructuredView({
         durationMs={durationMs}
       />
 
-      {/* Global MD/Raw toggle */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-[var(--color-text-tertiary)]">Display:</span>
-        <button
-          className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
-            globalMarkdown
-              ? 'bg-primary text-primary-foreground'
-              : 'text-[var(--color-text-secondary)] hover:text-foreground'
-          }`}
-          onClick={() => setGlobalMarkdown(true)}
-        >
-          Markdown
-        </button>
-        <button
-          className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
-            !globalMarkdown
-              ? 'bg-primary text-primary-foreground'
-              : 'text-[var(--color-text-secondary)] hover:text-foreground'
-          }`}
-          onClick={() => setGlobalMarkdown(false)}
-        >
-          Raw
-        </button>
-      </div>
-
       {/* Parse error */}
       {parsed.error && (
         <div className="error-banner">
@@ -97,11 +61,8 @@ export function StructuredView({
         </h3>
         <StructuredBox
           node={parsed.request}
-          globalMarkdown={globalMarkdown}
           collapsedBoxes={collapsedBoxes}
-          boxRawOverrides={boxRawOverrides}
           onToggleCollapse={toggleCollapse}
-          onToggleBoxRaw={toggleBoxRaw}
         />
       </div>
 
@@ -112,11 +73,8 @@ export function StructuredView({
         </h3>
         <StructuredBox
           node={parsed.response}
-          globalMarkdown={globalMarkdown}
           collapsedBoxes={collapsedBoxes}
-          boxRawOverrides={boxRawOverrides}
           onToggleCollapse={toggleCollapse}
-          onToggleBoxRaw={toggleBoxRaw}
         />
       </div>
 

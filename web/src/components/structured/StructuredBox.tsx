@@ -6,21 +6,15 @@ import { ROLE_STYLES } from '@/lib/types-structured';
 
 interface StructuredBoxProps {
   node: TreeNode;
-  globalMarkdown: boolean;
   collapsedBoxes: Set<string>;
-  boxRawOverrides: Set<string>;
   onToggleCollapse: (id: string) => void;
-  onToggleBoxRaw: (id: string) => void;
   index?: number;
 }
 
 export const StructuredBox = memo(function StructuredBox({
-  node, globalMarkdown, collapsedBoxes, boxRawOverrides,
-  onToggleCollapse, onToggleBoxRaw, index,
+  node, collapsedBoxes, onToggleCollapse, index,
 }: StructuredBoxProps) {
   const isCollapsed = collapsedBoxes.has(node.id);
-  const isOverridden = boxRawOverrides.has(node.id);
-  const showRaw = isOverridden ? globalMarkdown : !globalMarkdown;
   const hasChildren = node.children.length > 0;
   const hasContent = !!(node.text || node.imageUrl || node.isBase64Image || node.fileName);
   const isCollapsible = hasChildren || hasContent;
@@ -35,146 +29,150 @@ export const StructuredBox = memo(function StructuredBox({
   const isToolCall = node.type === 'tool-call';
   const isMessage = node.type === 'message' || node.type === 'system';
 
+  // Map style key to viewer.html data-r attribute
+  const dataRole = styleKey === 'thinking' ? 'assistant'
+    : styleKey === 'error' ? 'tool'
+    : styleKey === 'tool' ? 'tool'
+    : node.role ?? 'system';
+
   const handleHeaderClick = useCallback(() => {
     if (isCollapsible) onToggleCollapse(node.id);
   }, [isCollapsible, node.id, onToggleCollapse]);
 
-  const handleRawToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onToggleBoxRaw(node.id);
-  }, [node.id, onToggleBoxRaw]);
+  // Build label parts: role + rawLabel + id
+  const buildLabel = () => {
+    const parts: React.ReactNode[] = [];
+
+    // Role prefix
+    if (node.role) {
+      const roleColors: Record<string, string> = {
+        user: 'var(--c-blue)',
+        assistant: 'var(--c-violet)',
+        system: 'var(--c-blue)',
+        tool: 'var(--c-orange)',
+      };
+      const color = roleColors[node.role] ?? 'var(--text-1)';
+      parts.push(
+        <span key="role" style={{ color }}>{node.role}</span>
+      );
+    }
+
+    // rawLabel
+    parts.push(
+      <span key="raw" className="text-[var(--text-2)]">{node.rawLabel}</span>
+    );
+
+    // Tool id from metadata
+    const id = node.metadata?.id || node.metadata?.call_id;
+    if (id && typeof id === 'string') {
+      parts.push(
+        <span key="id" className="text-[var(--text-3)]">{id.length > 12 ? id.slice(0, 12) + '…' : id}</span>
+      );
+    }
+
+    return parts;
+  };
 
   return (
-    <div className={`rounded-lg border border-border ${node.bgClass} overflow-hidden`}>
-      <div className={`border-l-2 ${node.borderClass}`}>
-        {/* Header */}
-        <div
-          className={`flex items-center gap-2 px-3 py-2 ${style.headerBg} ${isCollapsible ? 'cursor-pointer hover:bg-[var(--color-surface-hover)]' : ''} transition-colors`}
-          onClick={handleHeaderClick}
-        >
-          {/* Collapse chevron */}
-          {isCollapsible && (
-            <span className="text-[var(--color-text-tertiary)] shrink-0">
-              {isCollapsed
-                ? <ChevronRightIcon className="size-3.5" />
-                : <ChevronDownIcon className="size-3.5" />}
-            </span>
+    <div className="msg" data-r={dataRole}>
+      <div
+        className={`msg-hd ${isCollapsible ? 'cursor-pointer' : ''}`}
+        onClick={handleHeaderClick}
+      >
+        {/* Collapse chevron */}
+        {isCollapsible && (
+          <span className="section-arrow">
+            {isCollapsed
+              ? <ChevronRightIcon className="size-3" />
+              : <ChevronDownIcon className="size-3" />}
+          </span>
+        )}
+
+        {/* Dot + glow */}
+        <span
+          className="section-dot"
+          style={{ backgroundColor: style.dot, boxShadow: `0 0 5px ${style.glow}` }}
+        />
+
+        {/* Index number for messages */}
+        {isMessage && index !== undefined && (
+          <span className="msg-hd-idx">[{index}]</span>
+        )}
+
+        {/* Label: role · rawLabel · id */}
+        {isToolCall && <span style={{ opacity: 0.5 }}>{'λ '}</span>}
+        {buildLabel().reduce<React.ReactNode[]>((acc, part, i) =>
+          i === 0 ? [part] : [...acc, <span key={`sep-${i}`} className="text-[var(--text-3)]">·</span>, part]
+        , [])}
+
+        {/* Badge — child count */}
+        {hasChildren && node.children.length > 0 && (
+          <span className="section-badge">
+            {node.children.length}
+          </span>
+        )}
+
+        <span className="flex-1" />
+      </div>
+
+      {/* Content (hidden when collapsed) */}
+      {!isCollapsed && (
+        <div className="msg-bd">
+          {/* Metadata row */}
+          {node.metadata && Object.keys(node.metadata).length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 pb-2 border-b border-[var(--border-0)]">
+              {Object.entries(node.metadata).map(([k, v]) => (
+                v !== '' && v !== undefined && v !== null ? (
+                  <div key={k} className="flex items-baseline gap-1">
+                    <span className="text-[10px] text-[var(--text-2)] font-mono uppercase">{k}</span>
+                    <span className="text-xs text-foreground font-mono">{String(v)}</span>
+                  </div>
+                ) : null
+              ))}
+            </div>
           )}
 
-          {/* Dot + glow */}
-          <span
-            className="section-dot"
-            style={{ backgroundColor: style.dot, boxShadow: `0 0 5px ${style.glow}` }}
-          />
-
-          {/* Index number for messages */}
-          {isMessage && index !== undefined && (
-            <span className="text-xs text-[var(--color-text-tertiary)] font-mono">[{index}]</span>
+          {/* Text / image / file content */}
+          {hasContent && !isToolCall && (
+            <MarkdownContent
+              text={node.text}
+              imageUrl={node.imageUrl}
+              isBase64Image={node.isBase64Image}
+              fileName={node.fileName}
+              fileType={node.fileType}
+            />
           )}
 
-          {/* Label */}
-          {showRaw ? (
-            <span className="text-sm text-[var(--color-text-secondary)] font-mono truncate">
-              {isToolCall && <span className="opacity-50">{'λ '}</span>}
-              {node.rawLabel}
-            </span>
-          ) : (
-            <span className={`text-sm font-medium truncate ${style.headerText}`}>
-              {isToolCall && <span className="opacity-50">{'λ '}</span>}
-              {node.label}
-            </span>
-          )}
-
-          {/* Badge — child count */}
-          {hasChildren && node.children.length > 0 && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-surface-raised)] text-[var(--color-text-tertiary)] shrink-0">
-              {node.children.length}
-            </span>
-          )}
-
-          <span className="flex-1" />
-
-          {/* Per-box MD/Raw toggle */}
-          {hasContent && (
-            <button
-              className="text-xs text-[var(--color-text-tertiary)] hover:text-foreground px-2 py-0.5 rounded transition-colors shrink-0"
-              onClick={handleRawToggle}
-            >
-              {showRaw ? 'MD' : 'Raw'}
-            </button>
-          )}
-        </div>
-
-        {/* Content (hidden when collapsed) */}
-        {!isCollapsed && (
-          <div className="border-t border-border/50">
-            {/* Metadata row */}
-            {node.metadata && Object.keys(node.metadata).length > 0 && (
-              <div className="px-3 py-2 flex flex-wrap gap-x-4 gap-y-1 border-b border-border/30">
-                {Object.entries(node.metadata).map(([k, v]) => (
-                  v !== '' && v !== undefined && v !== null ? (
-                    <div key={k} className="flex items-baseline gap-1">
-                      <span className="text-xs text-[var(--color-text-tertiary)]">{k}</span>
-                      <span className="text-xs text-foreground font-mono">{String(v)}</span>
-                    </div>
-                  ) : null
-                ))}
+          {/* Tool call block — viewer .tc-block style */}
+          {hasContent && isToolCall && (
+            <div className="tc-block">
+              <div className="tc-hd">
+                {node.metadata?.name || 'tool'}
               </div>
-            )}
-
-            {/* Text / image / file content */}
-            {hasContent && !isToolCall && (
-              <div className="px-3 py-2">
+              <div className="tc-args">
                 <MarkdownContent
                   text={node.text}
-                  showRaw={showRaw}
-                  imageUrl={node.imageUrl}
-                  isBase64Image={node.isBase64Image}
-                  fileName={node.fileName}
-                  fileType={node.fileType}
                 />
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Tool call block — viewer .tc-block style */}
-            {hasContent && isToolCall && (
-              <div className="px-3 py-2">
-                <div className="tc-block">
-                  <div className="tc-hd">
-                    {node.metadata?.name || 'tool'}
-                  </div>
-                  <div className="tc-args">
-                    <MarkdownContent
-                      text={node.text}
-                      showRaw={showRaw}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Children with connection lines */}
-            {hasChildren && (
-              <div className="px-3 pb-2">
-                <div className="ml-2 pl-4 border-l border-[var(--color-separator)] flex flex-col gap-2">
-                  {node.children.map((child, i) => (
-                    <StructuredBox
-                      key={child.id}
-                      node={child}
-                      globalMarkdown={globalMarkdown}
-                      collapsedBoxes={collapsedBoxes}
-                      boxRawOverrides={boxRawOverrides}
-                      onToggleCollapse={onToggleCollapse}
-                      onToggleBoxRaw={onToggleBoxRaw}
-                      index={child.type === 'message' || child.type === 'system' ? i : undefined}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+          {/* Children */}
+          {hasChildren && (
+            <div className="msg-list mt-2">
+              {node.children.map((child, i) => (
+                <StructuredBox
+                  key={child.id}
+                  node={child}
+                  collapsedBoxes={collapsedBoxes}
+                  onToggleCollapse={onToggleCollapse}
+                  index={child.type === 'message' || child.type === 'system' ? i : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 });

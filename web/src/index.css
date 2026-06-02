@@ -66,35 +66,34 @@
 }
 
 :root {
-    /* viewer.html hex palette */
-    --bg-root: #0f0f0d;
-    --bg-panel: #181816;
-    --bg-input: #141412;
-    --bg-tree: #1a1a18;
-    --bg-0: #0f0f0d;
-    --bg-1: #181816;
-    --bg-2: #222220;
-    --bg-3: #2e2e2a;
-    --border-0: #2a2a26;
-    --border-1: #33332e;
-    --text-0: #e8e6e1;
-    --text-1: #a09e96;
-    --text-2: #706e68;
-    --text-3: #4a4842;
-    --c-blue: #6ba4f8;
-    --c-cyan: #5cbfb5;
-    --c-green: #7eb85c;
-    --c-amber: #d4a853;
-    --c-amber-dim: #8a6d30;
-    --c-violet: #b392f0;
-    --c-orange: #e0964a;
-    --c-red: #e05555;
-    --c-pink: #f687b3;
+    /* Light theme palette */
+    --bg-root: #ffffff;
+    --bg-panel: #f9f9f7;
+    --bg-input: #f3f3f0;
+    --bg-tree: #f5f5f2;
+    --bg-0: #ffffff;
+    --bg-1: #f9f9f7;
+    --bg-2: #f0f0ec;
+    --bg-3: #e6e6e2;
+    --border-0: #d0d0cc;
+    --border-1: #bfbfbb;
+    --text-0: #1a1a18;
+    --text-1: #555550;
+    --text-2: #888883;
+    --text-3: #b0b0aa;
+    --c-blue: #2563eb;
+    --c-cyan: #0e8a7e;
+    --c-green: #3d8c2e;
+    --c-amber: #b08020;
+    --c-amber-dim: #c49a3a;
+    --c-violet: #7c3aed;
+    --c-orange: #c46a1a;
+    --c-red: #dc2626;
+    --c-pink: #db2777;
     --radius: 6px;
     --transition: 150ms ease;
 
-    /* shadcn token aliases — mapped onto viewer palette so all shadcn
-       components inherit the new look automatically. */
+    /* shadcn token aliases */
     --background: var(--bg-root);
     --foreground: var(--text-0);
     --card: var(--bg-panel);
@@ -102,7 +101,7 @@
     --popover: var(--bg-panel);
     --popover-foreground: var(--text-0);
     --primary: var(--c-amber);
-    --primary-foreground: var(--bg-root);
+    --primary-foreground: #ffffff;
     --secondary: var(--bg-2);
     --secondary-foreground: var(--text-0);
     --muted: var(--bg-2);
@@ -121,13 +120,13 @@
     --sidebar: var(--bg-panel);
     --sidebar-foreground: var(--text-0);
     --sidebar-primary: var(--c-amber);
-    --sidebar-primary-foreground: var(--bg-root);
+    --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: var(--bg-2);
     --sidebar-accent-foreground: var(--text-0);
     --sidebar-border: var(--border-0);
     --sidebar-ring: var(--c-amber-dim);
 
-    /* Type scale kept from previous version (utility classes depend on these) */
+    /* Type scale */
     --text-display: clamp(2.5rem, 2rem + 1.5vw, 3.5rem);
     --text-heading-2: clamp(1.125rem, 1rem + 0.25vw, 1.375rem);
     --text-body: 0.875rem;
@@ -230,9 +229,9 @@
     position: sticky; top: 0; z-index: 100;
     background: var(--bg-panel);
     border-bottom: 1px solid var(--border-0);
-    padding: 12px 16px;
+    padding: 8px 16px;
 }
-.topbar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.topbar-row { display: flex; align-items: center; gap: 8px; }
 .topbar-logo {
     font-size: 12px; font-weight: 500; letter-spacing: 0.06em;
     color: var(--text-1); text-transform: uppercase;
@@ -289,7 +288,7 @@
 .section-badge {
     font-size: 10px; font-family: var(--font-mono);
     padding: 1px 6px; border-radius: 3px;
-    background: rgba(255,255,255,0.04); color: var(--text-2);
+    background: rgba(0,0,0,0.04); color: var(--text-2);
 }
 .section-arrow {
     font-size: 9px; color: var(--text-2);
@@ -334,8 +333,8 @@
 .md em, .md-content em { color: var(--c-cyan); }
 .md code, .md-content code {
     font-family: var(--font-mono); font-size: 0.87em;
-    background: rgba(92,191,181,0.06);
-    border: 1px solid rgba(92,191,181,0.1);
+    background: rgba(14,138,126,0.06);
+    border: 1px solid rgba(14,138,126,0.12);
     border-radius: 3px; padding: 1px 5px;
     color: var(--c-cyan);
 }
@@ -363,7 +362,7 @@
     background: rgba(107,164,248,0.05); color: var(--c-blue); font-weight: 500;
 }
 .md tr:nth-child(even) td, .md-content tr:nth-child(even) td {
-    background: rgba(255,255,255,0.01);
+    background: rgba(0,0,0,0.02);
 }
 .md blockquote, .md-content blockquote {
     border-left: 3px solid var(--c-amber);
@@ -388,14 +387,14 @@
     text-transform: uppercase; letter-spacing: 0.03em;
 }
 .msg-bd { padding: 10px 12px; border-top: 1px solid var(--border-0); }
-.msg[data-r="system"]    .msg-hd { background: rgba(107,164,248,0.06);  color: var(--c-blue); }
-.msg[data-r="user"]      .msg-hd { background: rgba(126,184,92,0.06);   color: var(--c-green); }
-.msg[data-r="assistant"] .msg-hd { background: rgba(179,146,240,0.06); color: var(--c-violet); }
-.msg[data-r="tool"]      .msg-hd { background: rgba(224,150,74,0.06);   color: var(--c-orange); }
-.msg[data-r="system"]    { border-color: rgba(107,164,248,0.12); }
-.msg[data-r="user"]      { border-color: rgba(126,184,92,0.12); }
-.msg[data-r="assistant"] { border-color: rgba(179,146,240,0.12); }
-.msg[data-r="tool"]      { border-color: rgba(224,150,74,0.12); }
+.msg[data-r="system"]    .msg-hd { background: rgba(37,99,235,0.06);  color: var(--c-blue); }
+.msg[data-r="user"]      .msg-hd { background: rgba(61,140,46,0.06);   color: var(--c-green); }
+.msg[data-r="assistant"] .msg-hd { background: rgba(124,58,237,0.06); color: var(--c-violet); }
+.msg[data-r="tool"]      .msg-hd { background: rgba(196,106,26,0.06);   color: var(--c-orange); }
+.msg[data-r="system"]    { border-color: rgba(37,99,235,0.25); }
+.msg[data-r="user"]      { border-color: rgba(61,140,46,0.25); }
+.msg[data-r="assistant"] { border-color: rgba(124,58,237,0.25); }
+.msg[data-r="tool"]      { border-color: rgba(196,106,26,0.25); }
 .msg-hd-idx { color: var(--text-2); }
 .msg-hd-extra { color: var(--text-2); font-weight: 400; }
 
@@ -464,8 +463,8 @@
 /* --- Scrollbar --- */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #444; }
+::-webkit-scrollbar-thumb { background: #c0c0bc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a0a09c; }
 
 /* --- Error / status banners (viewer style) --- */
 .error-banner {
@@ -475,4 +474,20 @@
     border-radius: 3px;
     color: var(--c-red);
     font-family: var(--font-mono); font-size: 12px;
+}
+
+/* --- Raw mode inline formatting --- */
+.md-code-raw {
+    font-family: var(--font-mono); font-size: 0.87em;
+    background: rgba(14,138,126,0.06);
+    border: 1px solid rgba(14,138,126,0.12);
+    border-radius: 3px; padding: 1px 5px;
+    color: var(--c-cyan);
+}
+.md-pre-raw {
+    background: var(--bg-input);
+    border: 1px solid var(--border-0);
+    border-radius: var(--radius);
+    padding: 12px 14px; overflow-x: auto; margin: 0.7em 0;
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.65;
 }
