@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/lanesket/llm.log/internal/proxy"
 	"github.com/spf13/cobra"
@@ -54,75 +53,12 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Println()
 
-	// 4. Configure shell to source env file
-	fmt.Println("Configuring shell...")
-	if err := configureShell(); err != nil {
-		fmt.Printf("  ✗ %v\n", err)
-	} else {
-		fmt.Println("  ✓ Shell configured to source ~/.llm.log/env")
-	}
+	fmt.Println("To activate the proxy in your current shell, run:")
+	fmt.Println(`  eval "$(llm-log env)"`)
 	fmt.Println()
+	fmt.Println("Then start the proxy:")
+	fmt.Println("  llm-log start")
 
-	// 5. Generate shell completions
-	fmt.Println("Setting up shell completions...")
-	if err := setupCompletions(dir); err != nil {
-		fmt.Printf("  ✗ %v\n", err)
-	} else {
-		fmt.Println("  ✓ Shell completions installed")
-	}
-	fmt.Println()
-
-	fmt.Println("Restart your shell or run: source ~/." + shellName() + "rc")
-	fmt.Println("Then run: llm-log start")
-
-	return nil
-}
-
-func setupCompletions(dataDir string) error {
-	compDir := filepath.Join(dataDir, "completions")
-	if err := os.MkdirAll(compDir, 0755); err != nil {
-		return err
-	}
-
-	shell := shellName()
-	switch shell {
-	case "zsh":
-		f, err := os.Create(filepath.Join(compDir, "_llm-log"))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		if err := rootCmd.GenZshCompletion(f); err != nil {
-			return err
-		}
-		return addFpathToRC(compDir)
-	case "bash":
-		f, err := os.Create(filepath.Join(compDir, "llm-log.bash"))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		return rootCmd.GenBashCompletion(f)
-	default:
-		return fmt.Errorf("unsupported shell: %s", shell)
-	}
-}
-
-func addFpathToRC(compDir string) error {
-	rcFile := filepath.Join(os.Getenv("HOME"), ".zshrc")
-	content, err := os.ReadFile(rcFile)
-	if err != nil {
-		return err
-	}
-	if strings.Contains(string(content), "llm.log/completions") {
-		return nil
-	}
-	f, err := os.OpenFile(rcFile, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	fmt.Fprintf(f, "\n# llm.log completions\nfpath=(%s $fpath)\nautoload -Uz compinit && compinit\n", compDir)
 	return nil
 }
 
@@ -154,26 +90,6 @@ func installCert(certPath string) error {
 	default:
 		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
 	}
-}
-
-func configureShell() error {
-	rcFile := filepath.Join(os.Getenv("HOME"), "."+shellName()+"rc")
-	sourceLine := `source "$HOME/.llm.log/env" 2>/dev/null`
-
-	content, err := os.ReadFile(rcFile)
-	if err == nil && strings.Contains(string(content), "llm.log/env") {
-		fmt.Println("  Already configured")
-		return nil
-	}
-
-	f, err := os.OpenFile(rcFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	fmt.Fprintf(f, "\n# llm.log proxy\n%s\n", sourceLine)
-	return nil
 }
 
 func caBundlePath(dataDir string) string {
@@ -223,10 +139,3 @@ func createCABundle(dataDir string) error {
 	return os.WriteFile(caBundlePath(dataDir), bundle, 0644)
 }
 
-func shellName() string {
-	shell := os.Getenv("SHELL")
-	if strings.Contains(shell, "zsh") {
-		return "zsh"
-	}
-	return "bash"
-}
