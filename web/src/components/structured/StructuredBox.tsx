@@ -19,18 +19,22 @@ export const StructuredBox = memo(function StructuredBox({
   const hasContent = !!(node.text || node.imageUrl || node.isBase64Image || node.fileName);
   const isCollapsible = hasChildren || hasContent;
 
-  // Resolve style key: tool-call → orange, tool-result → cyan
+  const isToolCall = node.type === 'tool-call';
+  const isToolResult = node.type === 'tool-result';
+  const isTool = isToolCall || isToolResult;
+
+  // Determine if this content should use raw markdown formatting
+  // Only system and assistant messages get markdown; tools get plain text
+  const useMarkdown = node.role === 'assistant' || node.role === 'system' || node.type === 'thinking';
+
+  // Resolve style key
   const styleKey = node.type === 'thinking' ? 'thinking'
     : node.type === 'error' ? 'error'
-    : node.type === 'tool-call' ? 'tool'
-    : node.type === 'tool-result' ? 'tool-rsp'
+    : isToolCall ? 'tool'
+    : isToolResult ? 'tool-rsp'
     : node.role ?? 'generic';
   const style = ROLE_STYLES[styleKey] ?? ROLE_STYLES.generic;
 
-  const isToolCall = node.type === 'tool-call';
-  const isMessage = node.type === 'message' || node.type === 'system';
-
-  // Map style key to viewer.html data-r attribute
   const dataRole = styleKey === 'thinking' ? 'assistant'
     : styleKey === 'error' ? 'tool'
     : styleKey === 'tool' ? 'tool'
@@ -40,40 +44,6 @@ export const StructuredBox = memo(function StructuredBox({
   const handleHeaderClick = useCallback(() => {
     if (isCollapsible) onToggleCollapse(node.id);
   }, [isCollapsible, node.id, onToggleCollapse]);
-
-  // Build label parts: role + rawLabel + id
-  const buildLabel = () => {
-    const parts: React.ReactNode[] = [];
-
-    // Role prefix
-    if (node.role) {
-      const roleColors: Record<string, string> = {
-        user: 'var(--c-blue)',
-        assistant: 'var(--c-violet)',
-        system: 'var(--c-blue)',
-        tool: 'var(--c-orange)',
-      };
-      const color = roleColors[node.role] ?? 'var(--text-1)';
-      parts.push(
-        <span key="role" style={{ color }}>{node.role}</span>
-      );
-    }
-
-    // rawLabel
-    parts.push(
-      <span key="raw" className="text-[var(--text-2)]">{node.rawLabel}</span>
-    );
-
-    // Tool id from metadata
-    const id = node.metadata?.id || node.metadata?.call_id;
-    if (id && typeof id === 'string') {
-      parts.push(
-        <span key="id" className="text-[var(--text-3)]">{id.length > 12 ? id.slice(0, 12) + '…' : id}</span>
-      );
-    }
-
-    return parts;
-  };
 
   return (
     <div className="msg" data-r={dataRole}>
@@ -96,16 +66,54 @@ export const StructuredBox = memo(function StructuredBox({
           style={{ backgroundColor: style.dot, boxShadow: `0 0 5px ${style.glow}` }}
         />
 
-        {/* Index number for messages */}
-        {isMessage && index !== undefined && (
-          <span className="msg-hd-idx">[{index}]</span>
+        {/* Tool call: type tag + name + id — flat, no nesting */}
+        {isToolCall && (
+          <>
+            <span className="text-[var(--c-orange)]">tool_call</span>
+            <span className="text-[var(--text-3)]">·</span>
+            <span className="text-foreground">{node.metadata?.name || 'tool'}</span>
+            {node.metadata?.id && (
+              <>
+                <span className="text-[var(--text-3)]">·</span>
+                <span className="text-[var(--text-3)]">{String(node.metadata.id).slice(0, 12)}</span>
+              </>
+            )}
+          </>
         )}
 
-        {/* Label: role · rawLabel · id */}
-        {isToolCall && <span style={{ opacity: 0.5 }}>{'λ '}</span>}
-        {buildLabel().reduce<React.ReactNode[]>((acc, part, i) =>
-          i === 0 ? [part] : [...acc, <span key={`sep-${i}`} className="text-[var(--text-3)]">·</span>, part]
-        , [])}
+        {/* Tool result: type tag + id */}
+        {isToolResult && (
+          <>
+            <span className="text-[var(--c-cyan)]">tool_rsp</span>
+            {node.metadata?.tool_use_id && (
+              <>
+                <span className="text-[var(--text-3)]">·</span>
+                <span className="text-[var(--text-3)]">{String(node.metadata.tool_use_id).slice(0, 12)}</span>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Message/system: role · rawLabel · id */}
+        {!isTool && (
+          <>
+            {index !== undefined && (
+              <span className="msg-hd-idx">[{index}]</span>
+            )}
+            {node.role && (
+              <span style={{ color: style.dot }}>{node.role}</span>
+            )}
+            <span className="text-[var(--text-2)]">{node.rawLabel}</span>
+            {(node.metadata?.id || node.metadata?.call_id) && (
+              <>
+                <span className="text-[var(--text-3)]">·</span>
+                <span className="text-[var(--text-3)]">
+                  {String(node.metadata?.id || node.metadata?.call_id).slice(0, 12)}
+                </span>
+              </>
+            )}
+          </>
+        )}
 
         {/* Badge — child count */}
         {hasChildren && node.children.length > 0 && (
@@ -120,43 +128,30 @@ export const StructuredBox = memo(function StructuredBox({
       {/* Content (hidden when collapsed) */}
       {!isCollapsed && (
         <div className="msg-bd">
-          {/* Metadata row */}
-          {node.metadata && Object.keys(node.metadata).length > 0 && (
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 pb-2 border-b border-[var(--border-0)]">
-              {Object.entries(node.metadata).map(([k, v]) => (
-                v !== '' && v !== undefined && v !== null ? (
-                  <div key={k} className="flex items-baseline gap-1">
-                    <span className="text-[10px] text-[var(--text-2)] font-mono uppercase">{k}</span>
-                    <span className="text-xs text-foreground font-mono">{String(v)}</span>
-                  </div>
-                ) : null
-              ))}
-            </div>
+          {/* Tool call: JSON args as plain pre */}
+          {hasContent && isToolCall && (
+            <pre className="overflow-x-auto rounded bg-[var(--bg-input)] p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-all border border-[var(--border-0)]">
+              <code className="text-foreground">{node.text}</code>
+            </pre>
           )}
 
-          {/* Text / image / file content */}
-          {hasContent && !isToolCall && (
+          {/* Tool result: plain text */}
+          {hasContent && isToolResult && (
+            <pre className="whitespace-pre-wrap break-words text-xs font-mono leading-relaxed text-[var(--text-1)]">
+              {node.text}
+            </pre>
+          )}
+
+          {/* System / assistant / thinking: markdown formatting */}
+          {hasContent && !isTool && (
             <MarkdownContent
               text={node.text}
               imageUrl={node.imageUrl}
               isBase64Image={node.isBase64Image}
               fileName={node.fileName}
               fileType={node.fileType}
+              useMarkdown={useMarkdown}
             />
-          )}
-
-          {/* Tool call block — viewer .tc-block style */}
-          {hasContent && isToolCall && (
-            <div className="tc-block">
-              <div className="tc-hd">
-                {node.metadata?.name || 'tool'}
-              </div>
-              <div className="tc-args">
-                <MarkdownContent
-                  text={node.text}
-                />
-              </div>
-            </div>
           )}
 
           {/* Children */}

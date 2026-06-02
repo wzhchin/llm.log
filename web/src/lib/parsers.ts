@@ -213,6 +213,7 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
             label: `Tool Result${block.tool_use_id ? ` (${block.tool_use_id.slice(0, 8)})` : ''}`,
             rawLabel: `messages[${i}].content[${j}]`,
             text: resultText,
+            metadata: block.tool_use_id ? { tool_use_id: block.tool_use_id } : undefined,
           }));
         }
       }
@@ -368,6 +369,7 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
         label: `Tool Result${msg.tool_call_id ? ` (${msg.tool_call_id.slice(0, 8)})` : ''}`,
         rawLabel: `messages[${i}]`,
         text: typeof msg.content === 'string' ? msg.content : jsonStringify(msg.content),
+        metadata: msg.tool_call_id ? { tool_use_id: msg.tool_call_id } : undefined,
       });
     }
 
@@ -507,6 +509,7 @@ function parseResponsesInput(req: Record<string, any> | null): TreeNode[] {
           label: `Function Output${item.call_id ? ` (${item.call_id.slice(0, 8)})` : ''}`,
           rawLabel: `input[${i}]`,
           text: item.output ?? '',
+          metadata: item.call_id ? { tool_use_id: item.call_id } : undefined,
         });
       }
       return makeNode({
@@ -582,6 +585,7 @@ function parseResponsesOutput(res: Record<string, any> | null): TreeNode[] {
         label: `Function Output${item.call_id ? ` (${item.call_id.slice(0, 8)})` : ''}`,
         rawLabel: `output[${i}]`,
         text: item.output ?? '',
+        metadata: item.call_id ? { tool_use_id: item.call_id } : undefined,
       });
     }
 

@@ -6,6 +6,8 @@ interface MarkdownContentProps {
   isBase64Image?: boolean;
   fileName?: string;
   fileType?: string;
+  /** If true, apply raw markdown inline formatting. If false, plain text. */
+  useMarkdown?: boolean;
 }
 
 /** Raw-mode inline formatter: preserves ALL symbols, adds visual styling only. */
@@ -171,7 +173,7 @@ function formatInlineTokens(
 }
 
 export const MarkdownContent = memo(function MarkdownContent({
-  text, imageUrl, isBase64Image, fileName, fileType,
+  text, imageUrl, isBase64Image, fileName, fileType, useMarkdown = true,
 }: MarkdownContentProps) {
   if (imageUrl) {
     return (
@@ -204,6 +206,15 @@ export const MarkdownContent = memo(function MarkdownContent({
   }
 
   if (!text) return null;
+
+  // Plain text mode (for tool results etc.)
+  if (!useMarkdown) {
+    return (
+      <pre className="whitespace-pre-wrap break-words text-[13px] font-mono leading-[1.7] text-[var(--text-1)]">
+        {text}
+      </pre>
+    );
+  }
 
   const formatted = useMemo(() => {
     // Try to prettify JSON
