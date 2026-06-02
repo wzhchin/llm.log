@@ -140,14 +140,14 @@ export const StructuredBox = memo(function StructuredBox({
         <div className="msg-bd">
           {/* Tool call: JSON args as plain pre */}
           {hasContent && isToolCall && (
-            <pre className="overflow-x-auto rounded bg-[var(--bg-input)] p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-all border border-[var(--border-0)]">
+            <pre className="overflow-x-auto rounded bg-[var(--bg-input)] p-3 text-[13px] font-mono leading-relaxed whitespace-pre-wrap break-all border border-[var(--border-0)]">
               <code className="text-foreground">{node.text}</code>
             </pre>
           )}
 
           {/* Tool result: plain text */}
           {hasContent && isToolResult && (
-            <pre className="whitespace-pre-wrap break-words text-xs font-mono leading-relaxed text-[var(--text-1)]">
+            <pre className="whitespace-pre-wrap break-words text-[13px] font-mono leading-relaxed text-[var(--text-1)]">
               {node.text}
             </pre>
           )}
@@ -156,10 +156,10 @@ export const StructuredBox = memo(function StructuredBox({
           {isToolDef && (toolDesc || toolSchema) && (
             <div className="space-y-2">
               {toolDesc && (
-                <p className="text-xs text-[var(--text-1)]">{toolDesc}</p>
+                <p className="text-[13px] text-[var(--text-1)]">{toolDesc}</p>
               )}
               {toolSchema && (
-                <pre className="overflow-x-auto rounded bg-[var(--bg-input)] p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-all border border-[var(--border-0)]">
+                <pre className="overflow-x-auto rounded bg-[var(--bg-input)] p-3 text-[13px] font-mono leading-relaxed whitespace-pre-wrap break-all border border-[var(--border-0)]">
                   <code className="text-foreground">{toolSchema}</code>
                 </pre>
               )}

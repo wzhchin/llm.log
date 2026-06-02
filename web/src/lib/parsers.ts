@@ -138,7 +138,7 @@ function parseTools(tools: any[] | undefined): TreeNode[] {
 
     return makeNode({
       type: 'tool-def',
-      label: `🔨 ${name}`,
+      label: `${name}`,
       rawLabel: `tools[${i}]`,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     });
@@ -146,7 +146,7 @@ function parseTools(tools: any[] | undefined): TreeNode[] {
 
   wrapper.push(makeNode({
     type: 'tool-def',
-    label: `🛠️ Tools (${tools.length})`,
+    label: `Tools (${tools.length})`,
     rawLabel: 'tools',
     children,
   }));
@@ -253,6 +253,13 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
               imageUrl: src.url,
             }));
           }
+        } else if (block.type === 'thinking') {
+          children.push(makeNode({
+            type: 'thinking',
+            label: 'Thinking',
+            rawLabel: `messages[${i}].content[${j}]`,
+            text: block.thinking ?? '',
+          }));
         } else if (block.type === 'tool_use') {
           children.push(makeNode({
             type: 'tool-call', role: 'tool',
@@ -483,6 +490,16 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
 
     const contentText = typeof msg.content === 'string' ? msg.content : jsonStringify(msg.content);
 
+    // Reasoning/thinking content (DeepSeek, etc.)
+    if (msg.reasoning_content) {
+      children.unshift(makeNode({
+        type: 'thinking',
+        label: 'Thinking',
+        rawLabel: `messages[${i}].reasoning_content`,
+        text: typeof msg.reasoning_content === 'string' ? msg.reasoning_content : jsonStringify(msg.reasoning_content),
+      }));
+    }
+
     // If assistant message has only tool_calls and no text content,
     // promote tool blocks directly to avoid double-boxing.
     const allToolChildren = children.length > 0
@@ -507,6 +524,16 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
 function parseCCAssistantMessage(msg: Record<string, any>, choiceIdx: number): TreeNode[] {
   const children: TreeNode[] = [];
   const role = msg.role ?? 'assistant';
+
+  // Reasoning/thinking content (DeepSeek, etc.)
+  if (msg.reasoning_content) {
+    children.push(makeNode({
+      type: 'thinking',
+      label: 'Thinking',
+      rawLabel: `choices[${choiceIdx}].message.reasoning_content`,
+      text: typeof msg.reasoning_content === 'string' ? msg.reasoning_content : jsonStringify(msg.reasoning_content),
+    }));
+  }
 
   if (Array.isArray(msg.tool_calls)) {
     for (const tc of msg.tool_calls) {
