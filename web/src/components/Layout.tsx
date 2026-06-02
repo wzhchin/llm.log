@@ -22,9 +22,6 @@ export function Layout() {
       {/* viewer.html topbar */}
       <header className="topbar">
         <div className="topbar-row">
-          <div className="topbar-logo flex-1">
-            llm<span>.</span>log
-          </div>
           <nav className="flex gap-1">
             {navItems.map((item) => (
               <NavLink
@@ -43,8 +40,10 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
-          <div className="flex-1 flex items-center justify-end gap-3">
+          <div className="flex-1 flex items-center justify-center">
             <DateRangePicker />
+          </div>
+          <div className="flex items-center">
             <ProxyControl />
           </div>
         </div>
