@@ -16,6 +16,7 @@ var uiCmd = &cobra.Command{
 	Short: "Open web dashboard",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		port, _ := cmd.Flags().GetInt("port")
+		host, _ := cmd.Flags().GetString("host")
 		devMode, _ := cmd.Flags().GetBool("dev")
 
 		dataDir := DataDir()
@@ -37,7 +38,7 @@ var uiCmd = &cobra.Command{
 
 		srv := ui.New(store, dataDir, webFS, devMode)
 
-		addr := fmt.Sprintf("127.0.0.1:%d", port)
+		addr := fmt.Sprintf("%s:%d", host, port)
 		url := fmt.Sprintf("http://%s", addr)
 		fmt.Printf("llm.log UI running at %s\n", url)
 
@@ -46,6 +47,7 @@ var uiCmd = &cobra.Command{
 }
 
 func init() {
+	uiCmd.Flags().String("host", "127.0.0.1", "host address to bind to")
 	uiCmd.Flags().Int("port", 9923, "port for the web UI server")
 	uiCmd.Flags().Bool("dev", false, "development mode (API only, no static files)")
 	rootCmd.AddCommand(uiCmd)
