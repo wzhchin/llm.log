@@ -17,7 +17,7 @@ setup-hooks:
 	git config core.hooksPath .githooks
 
 build-web:
-	cd web && npm ci && npm run build
+	cd web && pnpm run build
 
 build-server:
 	go build -ldflags "$(LDFLAGS)" -o llm-log ./cmd/llm-log
