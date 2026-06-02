@@ -177,7 +177,7 @@ function parseAnthropic(req: unknown, res: unknown): ParsedResult {
 
   const response = makeNode({
     type: 'root', label: 'Response', rawLabel: 'response',
-    metadata: resObj ? { model: resObj.model ?? '', stop_reason: resObj.stop_reason ?? '' } : undefined,
+    metadata: resObj ? extractMetadata(resObj, new Set(['content', 'error', 'usage'])) : undefined,
     children: [
       ...parseAnthropicResponseContent(resObj),
       ...parseAnthropicError(resObj),
@@ -194,8 +194,25 @@ function parseAnthropicSystem(req: Record<string, any> | null): TreeNode[] {
     return [makeNode({ type: 'system', role: 'system', label: 'System Prompt', rawLabel: 'system', text: sys })];
   }
   if (Array.isArray(sys)) {
+    const children = sys.map((block: any, i: number) => {
+      const metadata: Record<string, string | number | boolean> = {};
+      if (block.cache_control) metadata.cache_control = jsonStringify(block.cache_control);
+      return makeNode({
+        type: 'generic',
+        label: `Block ${i + 1}${block.type ? ` (${block.type})` : ''}`,
+        rawLabel: `system[${i}]`,
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        text: block.text ?? jsonStringify(block),
+      });
+    });
     const text = sys.map((b: any) => b.text ?? '').filter(Boolean).join('\n');
-    return [makeNode({ type: 'system', role: 'system', label: `System Prompt (${sys.length} blocks)`, rawLabel: 'system', text })];
+    return [makeNode({
+      type: 'system', role: 'system',
+      label: `System Prompt (${sys.length} blocks)`,
+      rawLabel: 'system',
+      text,
+      children,
+    })];
   }
   return [];
 }
@@ -259,6 +276,14 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
             text: resultText,
             metadata: block.tool_use_id ? { tool_use_id: block.tool_use_id } : undefined,
           }));
+        } else {
+          // Fallback for unknown block types
+          children.push(makeNode({
+            type: 'generic',
+            label: `${block.type}`,
+            rawLabel: `messages[${i}].content[${j}]`,
+            text: jsonStringify(block),
+          }));
         }
       }
 
@@ -321,6 +346,14 @@ function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNod
         rawLabel: `content[${i}]`,
         metadata: { id: block.id ?? '', name: block.name ?? '' },
         text: jsonStringify(block.input),
+      }));
+    } else {
+      // Fallback for unknown block types
+      children.push(makeNode({
+        type: 'generic',
+        label: `${block.type}`,
+        rawLabel: `content[${i}]`,
+        text: jsonStringify(block),
       }));
     }
   }
