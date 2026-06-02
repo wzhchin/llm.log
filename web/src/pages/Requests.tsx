@@ -75,9 +75,8 @@ function DetailContent({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Fixed header area */}
-      <div className="flex-none border-b border-[var(--color-separator)] p-4">
+    <div className="overflow-y-auto h-full">
+      <div className="p-4">
         {/* Header row */}
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
@@ -106,23 +105,8 @@ function DetailContent({
           )}
         </div>
 
-        {/* Metrics strip */}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 py-3 mt-3 border-t border-[var(--color-separator)]">
-          {[
-            { label: 'Input', value: formatTokens(detail.input_tokens), raw: String(detail.input_tokens) },
-            { label: 'Output', value: formatTokens(detail.output_tokens), raw: String(detail.output_tokens) },
-            { label: 'Cost', value: formatCost(detail.total_cost), raw: detail.total_cost !== null ? String(detail.total_cost) : 'N/A' },
-            { label: 'Duration', value: formatDuration(detail.duration_ms), raw: `${detail.duration_ms}ms` },
-          ].map(m => (
-            <div key={m.label} className="flex items-baseline gap-1.5">
-              <span className="text-[var(--text-micro)] uppercase tracking-wide text-[var(--color-text-tertiary)]">{m.label}</span>
-              <CopyableValue value={m.raw} display={m.value} className="text-sm font-medium text-foreground tabular-nums" />
-            </div>
-          ))}
-        </div>
-
         {/* Metadata grid */}
-        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs pt-3 border-t border-[var(--color-separator)]">
+        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs mt-3">
           <span className="text-[var(--color-text-tertiary)]">Endpoint</span>
           <CopyableValue value={detail.endpoint} className="text-xs text-foreground truncate" mono />
           <span className="text-[var(--color-text-tertiary)]">Source</span>
@@ -132,7 +116,7 @@ function DetailContent({
         </div>
 
         {/* Open full view link */}
-        <div className="mt-3">
+        <div className="mt-2 mb-4">
           <a
             href={`/requests/${detail.id}`}
             target="_blank"
@@ -143,23 +127,19 @@ function DetailContent({
             Open full view
           </a>
         </div>
-      </div>
 
-      {/* Scrollable body — structured view */}
-      <div className="flex-1 overflow-y-auto p-4 pt-0">
-        <div className="mt-4">
-          <StructuredView
-            requestBody={detail.request_body}
-            responseBody={detail.response_body}
-            endpoint={detail.endpoint}
-            inputTokens={detail.input_tokens}
-            outputTokens={detail.output_tokens}
-            cacheReadTokens={detail.cache_read_tokens}
-            cacheWriteTokens={detail.cache_write_tokens}
-            totalCost={detail.total_cost}
-            durationMs={detail.duration_ms}
-          />
-        </div>
+        {/* Structured view — includes TokenSummary (the single source for metrics) */}
+        <StructuredView
+          requestBody={detail.request_body}
+          responseBody={detail.response_body}
+          endpoint={detail.endpoint}
+          inputTokens={detail.input_tokens}
+          outputTokens={detail.output_tokens}
+          cacheReadTokens={detail.cache_read_tokens}
+          cacheWriteTokens={detail.cache_write_tokens}
+          totalCost={detail.total_cost}
+          durationMs={detail.duration_ms}
+        />
       </div>
     </div>
   );
@@ -434,7 +414,7 @@ export function Requests() {
 
       {/* ─── Split mode (desktop only) ──────────────────────────────── */}
       {viewMode === 'split' && (
-        <div className="flex gap-0 h-[calc(100vh-12rem)] -m-6 lg:-m-8 p-6 lg:p-8">
+        <div className="flex gap-0 h-[calc(100vh-10rem)] -m-6 lg:-m-8">
           {/* Left panel — compact list */}
           <div className="flex flex-col w-1/4 min-w-0 border-r border-[var(--color-separator)]">
             {/* List header */}
