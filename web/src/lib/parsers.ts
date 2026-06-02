@@ -232,14 +232,18 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
 
     if (Array.isArray(content)) {
       const children: TreeNode[] = [];
-      let textParts: string[] = [];
 
       for (let j = 0; j < content.length; j++) {
         const block = content[j];
         if (!block?.type) continue;
 
         if (block.type === 'text') {
-          textParts.push(block.text ?? '');
+          children.push(makeNode({
+            type: 'content-block',
+            label: 'Text',
+            rawLabel: `messages[${i}].content[${j}]`,
+            text: block.text ?? '',
+          }));
         } else if (block.type === 'image') {
           const src = block.source;
           if (src?.type === 'base64') {
@@ -292,14 +296,11 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
         }
       }
 
-      const mainText = textParts.join('\n');
-
-      // If the message has only tool-related blocks and no text,
+      // If the message has only tool-related blocks,
       // promote the tool blocks directly to avoid double-boxing.
       const allToolChildren = children.length > 0
         && children.every(c => c.type === 'tool-call' || c.type === 'tool-result');
-      if (!mainText && allToolChildren) {
-        // Attach position metadata so each child still knows its origin
+      if (allToolChildren) {
         children.forEach((c, ci) => {
           c.rawLabel = `messages[${i}].content[${ci}]`;
         });
@@ -313,7 +314,6 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
         type: 'message', role: role as any,
         label: `${capitalize(role)}${summary}`,
         rawLabel: `messages[${i}]`,
-        text: mainText || undefined,
         children,
       });
     }
@@ -342,14 +342,18 @@ function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNod
   if (!Array.isArray(res.content)) return [];
 
   const children: TreeNode[] = [];
-  let textParts: string[] = [];
 
   for (let i = 0; i < res.content.length; i++) {
     const block = res.content[i];
     if (!block?.type) continue;
 
     if (block.type === 'text') {
-      textParts.push(block.text ?? '');
+      children.push(makeNode({
+        type: 'content-block',
+        label: 'Text',
+        rawLabel: `content[${i}]`,
+        text: block.text ?? '',
+      }));
     } else if (block.type === 'thinking') {
       children.push(makeNode({
         type: 'thinking',
@@ -376,7 +380,6 @@ function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNod
     }
   }
 
-  const mainText = textParts.join('\n');
   const blockCount = res.content.length;
   const summary = blockCount > 1 ? ` (${blockCount} blocks)` : '';
 
@@ -384,7 +387,6 @@ function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNod
     type: 'message', role: 'assistant',
     label: `Assistant${summary}`,
     rawLabel: 'content',
-    text: mainText || undefined,
     children,
   })];
 }

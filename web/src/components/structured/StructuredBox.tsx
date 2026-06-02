@@ -184,18 +184,30 @@ export const StructuredBox = memo(function StructuredBox({
             />
           )}
 
-          {/* Children */}
+          {/* Children — render content-block inline, others as boxes */}
           {hasChildren && (
-            <div className="msg-list mt-2">
-              {node.children.map((child, i) => (
-                <StructuredBox
-                  key={child.id}
-                  node={child}
-                  collapsedBoxes={collapsedBoxes}
-                  onToggleCollapse={onToggleCollapse}
-                  index={child.type === 'message' || child.type === 'system' ? i : undefined}
-                />
-              ))}
+            <div className="mt-2 space-y-2">
+              {node.children.map((child, i) => {
+                // Inline text blocks rendered directly as MarkdownContent
+                if (child.type === 'content-block' && !child.imageUrl && !child.isBase64Image) {
+                  return (
+                    <MarkdownContent
+                      key={child.id}
+                      text={child.text}
+                      useMarkdown={node.role === 'assistant' || node.role === 'system'}
+                    />
+                  );
+                }
+                return (
+                  <StructuredBox
+                    key={child.id}
+                    node={child}
+                    collapsedBoxes={collapsedBoxes}
+                    onToggleCollapse={onToggleCollapse}
+                    index={child.type === 'message' || child.type === 'system' ? i : undefined}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
