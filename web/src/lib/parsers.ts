@@ -104,6 +104,9 @@ function extractMetadata(obj: Record<string, unknown>, skip: Set<string>): Recor
     if (v === undefined || v === null) continue;
     if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
       md[k] = v;
+    } else {
+      // Stringify objects/arrays so tool_choice, response_format, etc. show up
+      md[k] = jsonStringify(v);
     }
   }
   return Object.keys(md).length > 0 ? md : undefined;
@@ -111,6 +114,46 @@ function extractMetadata(obj: Record<string, unknown>, skip: Set<string>): Recor
 
 function jsonStringify(v: unknown): string {
   try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+}
+
+// Parse tools array into individual collapsible boxes
+function parseTools(tools: any[] | undefined): TreeNode[] {
+  if (!Array.isArray(tools) || tools.length === 0) return [];
+
+  const wrapper: TreeNode[] = [];
+
+  // Anthropic-style: { name, description, input_schema }
+  // OpenAI-style: { type: "function", function: { name, description, parameters } }
+  const children = tools.map((tool, i) => {
+    const isFunction = tool.type === 'function' && tool.function;
+    const name = isFunction ? tool.function.name : tool.name ?? `tool[${i}]`;
+    const description = isFunction ? tool.function.description : tool.description;
+    const schema = isFunction ? tool.function.parameters : tool.input_schema;
+
+    const metadata: Record<string, string | number | boolean> = {};
+    if (name) metadata.name = name;
+
+    const textParts: string[] = [];
+    if (description) textParts.push(description);
+    if (schema) textParts.push('Schema:\n' + jsonStringify(schema));
+
+    return makeNode({
+      type: 'generic',
+      label: `🔨 ${name}`,
+      rawLabel: `tools[${i}]`,
+      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      text: textParts.join('\n\n') || undefined,
+    });
+  });
+
+  wrapper.push(makeNode({
+    type: 'generic',
+    label: `🛠️ Tools (${tools.length})`,
+    rawLabel: 'tools',
+    children,
+  }));
+
+  return wrapper;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,12 +164,13 @@ function parseAnthropic(req: unknown, res: unknown): ParsedResult {
   const reqObj = req as Record<string, any> | null;
   const resObj = res as Record<string, any> | null;
 
-  const skipReq = new Set(['system', 'messages', 'tools', 'tool_choice']);
+  const skipReq = new Set(['system', 'messages', 'tools']);
   const request = makeNode({
     type: 'root', label: 'Request', rawLabel: 'request',
     metadata: reqObj ? extractMetadata(reqObj, skipReq) : undefined,
     children: [
       ...parseAnthropicSystem(reqObj),
+      ...parseTools(reqObj?.tools),
       ...parseAnthropicMessages(reqObj?.messages),
     ],
   });
@@ -308,11 +352,14 @@ function parseChatCompletions(req: unknown, res: unknown): ParsedResult {
   const reqObj = req as Record<string, any> | null;
   const resObj = res as Record<string, any> | null;
 
-  const skipReq = new Set(['messages', 'tools', 'tool_choice']);
+  const skipReq = new Set(['messages', 'tools']);
   const request = makeNode({
     type: 'root', label: 'Request', rawLabel: 'request',
     metadata: reqObj ? extractMetadata(reqObj, skipReq) : undefined,
-    children: parseCCMessages(reqObj?.messages),
+    children: [
+      ...parseTools(reqObj?.tools),
+      ...parseCCMessages(reqObj?.messages),
+    ],
   });
 
   const resChildren: TreeNode[] = [];
@@ -438,12 +485,13 @@ function parseResponsesAPI(req: unknown, res: unknown): ParsedResult {
   const reqObj = req as Record<string, any> | null;
   const resObj = res as Record<string, any> | null;
 
-  const skipReq = new Set(['input', 'instructions', 'tools', 'tool_choice']);
+  const skipReq = new Set(['input', 'instructions', 'tools']);
   const request = makeNode({
     type: 'root', label: 'Request', rawLabel: 'request',
     metadata: reqObj ? extractMetadata(reqObj, skipReq) : undefined,
     children: [
       ...parseResponsesInstructions(reqObj),
+      ...parseTools(reqObj?.tools),
       ...parseResponsesInput(reqObj),
     ],
   });
