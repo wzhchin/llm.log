@@ -1,6 +1,6 @@
 // Package rawlog writes full request/response transcripts to per-request log files.
 //
-// File layout:  <logsDir>/MM-DD/YYYYMMDDTHHMMSS_<shortID>.log
+// File layout:  <logsDir>/MM-DD/YYYYMMDDTHHMMSS_<sqliteID>.log
 //
 // Each file uses line prefixes to distinguish request, response, error, and summary:
 //
@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -78,6 +79,7 @@ type Entry struct {
 	buf     strings.Builder
 	startTS time.Time
 	mu      sync.Mutex
+	written bool // true after flush has succeeded
 }
 
 // Request writes the REQ| section: request line, headers, blank line, body.
@@ -192,6 +194,33 @@ func (e *Entry) flush() {
 	}
 	defer f.Close()
 	io.WriteString(f, e.buf.String())
+	e.written = true
+}
+
+// Rename changes the file name from the temporary shortID-based name to one
+// based on the SQLite record ID. The new name keeps the same timestamp prefix
+// and directory. If the file hasn't been flushed yet or the rename fails, it
+// logs a warning and leaves the original file name unchanged.
+func (e *Entry) Rename(sqliteID int64) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if !e.written {
+		return
+	}
+
+	ext := filepath.Ext(e.path)
+	newName := e.startTS.Format("20060102T150405") + "_" + fmt.Sprintf("%d", sqliteID) + ext
+	newPath := filepath.Join(e.dir, newName)
+
+	if err := os.Rename(e.path, newPath); err != nil {
+		log.Printf("rawlog: rename %s → %s failed: %v", filepath.Base(e.path), newName, err)
+		return
+	}
+	e.path = newPath
 }
 
 // writePrefixed writes text with a prefix on the first line.

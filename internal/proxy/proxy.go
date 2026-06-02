@@ -32,7 +32,7 @@ type Proxy struct {
 	store        storage.Store
 	price        PriceLookup
 	rawlog       *rawlog.Logger
-	saveQueue    chan *storage.Record
+	saveQueue    chan *saveItem
 	stop         chan struct{}
 	stopped      chan struct{}
 	batchTimeout time.Duration
@@ -75,7 +75,7 @@ func New(addr, dataDir string, store storage.Store, price PriceLookup, rl *rawlo
 		store:        store,
 		price:        price,
 		rawlog:       rl,
-		saveQueue:    make(chan *storage.Record, saveQueueSize),
+		saveQueue:    make(chan *saveItem, saveQueueSize),
 		stop:         make(chan struct{}),
 		stopped:      make(chan struct{}),
 		batchTimeout: saveBatchTimeout,
@@ -118,7 +118,7 @@ func (p *Proxy) Shutdown() error {
 func (p *Proxy) runBatcher() {
 	defer close(p.stopped)
 
-	batch := make([]*storage.Record, 0, saveBatchSize)
+	batch := make([]*saveItem, 0, saveBatchSize)
 	retries := 0
 	timer := time.NewTimer(p.batchTimeout)
 	timer.Stop() // idle until the first record arrives
@@ -151,7 +151,11 @@ func (p *Proxy) runBatcher() {
 		if len(batch) == 0 {
 			return
 		}
-		if err := p.store.SaveBatch(batch); err != nil {
+		recs := make([]*storage.Record, len(batch))
+		for i, item := range batch {
+			recs[i] = item.rec
+		}
+		if err := p.store.SaveBatch(recs); err != nil {
 			retries++
 			if retries >= maxRetries {
 				log.Printf("batch save failed after %d retries (%d records dropped): %v", retries, len(batch), err)
@@ -162,13 +166,17 @@ func (p *Proxy) runBatcher() {
 			}
 			return
 		}
+		// Rename raw log files to use SQLite IDs now that they're assigned.
+		for _, item := range batch {
+			item.rawEntry.Rename(item.rec.ID)
+		}
 		clearBatch()
 	}
 
 	for {
 		select {
-		case rec := <-p.saveQueue:
-			batch = append(batch, rec)
+		case item := <-p.saveQueue:
+			batch = append(batch, item)
 			if len(batch) == 1 {
 				// Start the window on the first record of a new batch.
 				rearmTimer()
@@ -186,17 +194,24 @@ func (p *Proxy) runBatcher() {
 			// Drain any records queued before shutdown.
 			for {
 				select {
-				case rec := <-p.saveQueue:
-					batch = append(batch, rec)
+				case item := <-p.saveQueue:
+					batch = append(batch, item)
 				default:
 					// Final flush: retry up to maxRetries to avoid silent data loss.
 					for attempt := 0; attempt < maxRetries; attempt++ {
 						if len(batch) == 0 {
 							return
 						}
-						if err := p.store.SaveBatch(batch); err != nil {
+						recs := make([]*storage.Record, len(batch))
+						for i, it := range batch {
+							recs[i] = it.rec
+						}
+						if err := p.store.SaveBatch(recs); err != nil {
 							log.Printf("shutdown flush error (attempt %d/%d, %d records): %v", attempt+1, maxRetries, len(batch), err)
 							continue
+						}
+						for _, it := range batch {
+							it.rawEntry.Rename(it.rec.ID)
 						}
 						clearBatch()
 						return
@@ -371,10 +386,16 @@ func (p *Proxy) save(state *requestState, statusCode int, streaming bool, result
 	state.rawEntry.End(statusCode, streaming, duration)
 
 	select {
-	case p.saveQueue <- rec:
+	case p.saveQueue <- &saveItem{rec: rec, rawEntry: state.rawEntry}:
 	default:
 		log.Printf("save queue full, record dropped")
 	}
+}
+
+// saveItem pairs a storage record with its raw log entry for batch processing.
+type saveItem struct {
+	rec      *storage.Record
+	rawEntry *rawlog.Entry
 }
 
 type requestState struct {
