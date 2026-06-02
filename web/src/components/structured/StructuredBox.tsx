@@ -21,6 +21,7 @@ export const StructuredBox = memo(function StructuredBox({
 
   const isToolCall = node.type === 'tool-call';
   const isToolResult = node.type === 'tool-result';
+  const isToolDef = node.type === 'tool-def';
   const isTool = isToolCall || isToolResult;
 
   // Determine if this content should use raw markdown formatting
@@ -44,6 +45,10 @@ export const StructuredBox = memo(function StructuredBox({
   const handleHeaderClick = useCallback(() => {
     if (isCollapsible) onToggleCollapse(node.id);
   }, [isCollapsible, node.id, onToggleCollapse]);
+
+  // Tool-def metadata
+  const toolDesc = isToolDef ? String(node.metadata?.description ?? '') : '';
+  const toolSchema = isToolDef ? String(node.metadata?.input_schema ?? '') : '';
 
   return (
     <div className="msg" data-r={dataRole}>
@@ -94,8 +99,13 @@ export const StructuredBox = memo(function StructuredBox({
           </>
         )}
 
+        {/* Tool definition: label (contains name with 🔨/🛠️ icon) */}
+        {isToolDef && (
+          <span className="text-foreground">{node.label}</span>
+        )}
+
         {/* Message/system: role · rawLabel · id */}
-        {!isTool && (
+        {!isTool && !isToolDef && (
           <>
             {index !== undefined && (
               <span className="msg-hd-idx">[{index}]</span>
@@ -142,8 +152,22 @@ export const StructuredBox = memo(function StructuredBox({
             </pre>
           )}
 
+          {/* Tool definition: description + schema */}
+          {isToolDef && (toolDesc || toolSchema) && (
+            <div className="space-y-2">
+              {toolDesc && (
+                <p className="text-xs text-[var(--text-1)]">{toolDesc}</p>
+              )}
+              {toolSchema && (
+                <pre className="overflow-x-auto rounded bg-[var(--bg-input)] p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-all border border-[var(--border-0)]">
+                  <code className="text-foreground">{toolSchema}</code>
+                </pre>
+              )}
+            </div>
+          )}
+
           {/* System / assistant / thinking: markdown formatting */}
-          {hasContent && !isTool && (
+          {hasContent && !isTool && !isToolDef && (
             <MarkdownContent
               text={node.text}
               imageUrl={node.imageUrl}

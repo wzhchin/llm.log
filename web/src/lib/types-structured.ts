@@ -5,6 +5,7 @@ export type BoxType =
   | 'content-block'
   | 'tool-call'
   | 'tool-result'
+  | 'tool-def'
   | 'thinking'
   | 'error'
   | 'generic';
@@ -134,6 +135,7 @@ export const TYPE_ICONS: Record<BoxType, string> = {
   system: '',
   message: '',
   'content-block': '',
+  'tool-def': '',
   'tool-call': '',
   'tool-result': '',
   thinking: '',

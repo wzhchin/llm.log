@@ -76,6 +76,7 @@ function makeNode(p: {
     : p.type === 'error' ? 'error'
     : p.type === 'tool-call' ? 'tool'
     : p.type === 'tool-result' ? 'tool-rsp'
+    : p.type === 'tool-def' ? 'generic'
     : p.role ?? 'generic';
   const s = ROLE_STYLES[styleKey] ?? ROLE_STYLES.generic;
   return {
@@ -132,22 +133,19 @@ function parseTools(tools: any[] | undefined): TreeNode[] {
 
     const metadata: Record<string, string | number | boolean> = {};
     if (name) metadata.name = name;
-
-    const textParts: string[] = [];
-    if (description) textParts.push(description);
-    if (schema) textParts.push('Schema:\n' + jsonStringify(schema));
+    if (description) metadata.description = description;
+    if (schema) metadata.input_schema = jsonStringify(schema);
 
     return makeNode({
-      type: 'generic',
+      type: 'tool-def',
       label: `🔨 ${name}`,
       rawLabel: `tools[${i}]`,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      text: textParts.join('\n\n') || undefined,
     });
   });
 
   wrapper.push(makeNode({
-    type: 'generic',
+    type: 'tool-def',
     label: `🛠️ Tools (${tools.length})`,
     rawLabel: 'tools',
     children,
@@ -288,6 +286,19 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
       }
 
       const mainText = textParts.join('\n');
+
+      // If the message has only tool-related blocks and no text,
+      // promote the tool blocks directly to avoid double-boxing.
+      const allToolChildren = children.length > 0
+        && children.every(c => c.type === 'tool-call' || c.type === 'tool-result');
+      if (!mainText && allToolChildren) {
+        // Attach position metadata so each child still knows its origin
+        children.forEach((c, ci) => {
+          c.rawLabel = `messages[${i}].content[${ci}]`;
+        });
+        return children;
+      }
+
       const blockCount = content.length;
       const summary = blockCount > 1 ? ` (${blockCount} blocks)` : '';
 
@@ -306,7 +317,7 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
       rawLabel: `messages[${i}]`,
       text: jsonStringify(content),
     });
-  });
+  }).flat();
 }
 
 function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNode[] {
@@ -472,6 +483,17 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
 
     const contentText = typeof msg.content === 'string' ? msg.content : jsonStringify(msg.content);
 
+    // If assistant message has only tool_calls and no text content,
+    // promote tool blocks directly to avoid double-boxing.
+    const allToolChildren = children.length > 0
+      && children.every(c => c.type === 'tool-call' || c.type === 'tool-result');
+    if (!contentText && allToolChildren) {
+      children.forEach((c, ci) => {
+        c.rawLabel = `messages[${i}].tool_calls[${ci}]`;
+      });
+      return children;
+    }
+
     return makeNode({
       type: 'message', role: role as any,
       label: `${capitalize(role)}`,
@@ -479,7 +501,7 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
       text: contentText || undefined,
       children,
     });
-  });
+  }).flat();
 }
 
 function parseCCAssistantMessage(msg: Record<string, any>, choiceIdx: number): TreeNode[] {
