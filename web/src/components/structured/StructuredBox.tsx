@@ -22,6 +22,7 @@ export const StructuredBox = memo(function StructuredBox({
   const isToolCall = node.type === 'tool-call';
   const isToolResult = node.type === 'tool-result';
   const isToolDef = node.type === 'tool-def';
+  const isThinking = node.type === 'thinking';
   const isTool = isToolCall || isToolResult;
 
   // Determine if this content should use raw markdown formatting
@@ -71,6 +72,11 @@ export const StructuredBox = memo(function StructuredBox({
           style={{ backgroundColor: style.dot, boxShadow: `0 0 5px ${style.glow}` }}
         />
 
+        {/* Thinking: type tag */}
+        {isThinking && (
+          <span className="text-[var(--c-amber)]">thinking</span>
+        )}
+
         {/* Tool call: type tag + name + id — flat, no nesting */}
         {isToolCall && (
           <>
@@ -105,7 +111,7 @@ export const StructuredBox = memo(function StructuredBox({
         )}
 
         {/* Message/system: role · rawLabel · id */}
-        {!isTool && !isToolDef && (
+        {!isTool && !isToolDef && !isThinking && (
           <>
             {index !== undefined && (
               <span className="msg-hd-idx">[{index}]</span>
