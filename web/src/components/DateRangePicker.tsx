@@ -106,7 +106,7 @@ export function DateRangePicker() {
       {/* Track */}
       <div
         ref={trackRef}
-        className="relative h-2 w-44 flex-shrink-0 rounded-full bg-[var(--bg-3)] touch-none select-none"
+        className="relative h-2 w-72 flex-shrink-0 rounded-full bg-[var(--bg-3)] touch-none select-none"
       >
         {/* Selected range indicator */}
         <div
