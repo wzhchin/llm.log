@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
-	"os/exec"
-	"runtime"
 
 	"github.com/lanesket/llm.log/internal/storage"
 	"github.com/lanesket/llm.log/internal/ui"
@@ -43,10 +41,6 @@ var uiCmd = &cobra.Command{
 		url := fmt.Sprintf("http://%s", addr)
 		fmt.Printf("llm.log UI running at %s\n", url)
 
-		if !devMode {
-			openBrowser(url)
-		}
-
 		return http.ListenAndServe(addr, srv)
 	},
 }
@@ -57,11 +51,4 @@ func init() {
 	rootCmd.AddCommand(uiCmd)
 }
 
-func openBrowser(url string) {
-	switch runtime.GOOS {
-	case "darwin":
-		exec.Command("open", url).Start()
-	case "linux":
-		exec.Command("xdg-open", url).Start()
-	}
-}
+
