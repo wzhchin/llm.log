@@ -26,20 +26,13 @@ export const TokenSummary = memo(function TokenSummary({
   const visible = metrics.filter(m => m.show);
 
   return (
-    <div className="rounded-lg bg-[var(--color-surface-raised)] border border-border px-3 py-2.5">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        {visible.map((m, i) => (
-          <div key={m.label} className="flex items-baseline gap-1.5">
-            <span className="text-[var(--text-micro)] uppercase tracking-wide text-[var(--color-text-tertiary)]">
-              {m.label}
-            </span>
-            <span className="text-sm font-medium text-foreground tabular-nums">{m.value}</span>
-            {i < visible.length - 1 && (
-              <span className="text-[var(--color-separator)] ml-1">|</span>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className="metric-grid">
+      {visible.map(m => (
+        <div key={m.label} className="metric-card">
+          <div className="metric-card-label">{m.label}</div>
+          <div className="metric-card-value">{m.value}</div>
+        </div>
+      ))}
     </div>
   );
 });

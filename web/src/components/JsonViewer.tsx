@@ -69,13 +69,14 @@ function tokenize(obj: unknown, indent: number = 0): JsonToken[] {
   return tokens;
 }
 
+// Viewer palette: blue keys, cyan strings, amber numbers, orange booleans
 const colorMap: Record<string, string> = {
-  key: 'text-[var(--color-text-secondary)]',
-  string: 'text-emerald-400',
-  number: 'text-blue-400',
-  boolean: 'text-amber-400',
-  null: 'text-amber-400',
-  punctuation: 'text-[var(--color-text-tertiary)]',
+  key: 'jk',
+  string: 'js',
+  number: 'jn',
+  boolean: 'jb',
+  null: 'jl',
+  punctuation: 'jl',
 };
 
 export function JsonViewer({ data }: JsonViewerProps) {
@@ -121,14 +122,14 @@ export function JsonViewer({ data }: JsonViewerProps) {
       >
         {copied ? (
           <span className="inline-flex items-center gap-1">
-            <CheckIcon className="size-3.5 text-emerald-400" />
-            <span className="text-[10px] text-emerald-400">Copied!</span>
+            <CheckIcon className="size-3.5 text-c-green" />
+            <span className="text-[10px] text-c-green font-mono">Copied!</span>
           </span>
         ) : (
           <CopyIcon className="size-3.5" />
         )}
       </Button>
-      <pre className="overflow-auto rounded-lg bg-[var(--color-surface-raised)] p-4 text-xs font-mono leading-relaxed">
+      <pre className="overflow-auto rounded-md bg-[var(--bg-1)] border border-[var(--border-0)] p-3 text-xs font-mono leading-relaxed">
         <code>{rendered}</code>
       </pre>
       {isLarge && !showFull && (

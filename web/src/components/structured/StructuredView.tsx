@@ -85,8 +85,8 @@ export function StructuredView({
 
       {/* Parse error */}
       {parsed.error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-          ⚠️ {parsed.error}
+        <div className="error-banner">
+          {parsed.error}
         </div>
       )}
 
@@ -119,6 +119,13 @@ export function StructuredView({
           onToggleBoxRaw={toggleBoxRaw}
         />
       </div>
+
+      {/* Finish reason tag */}
+      {parsed.finishReason && (
+        <div className="finish-tag">
+          finish_reason: <b>{parsed.finishReason}</b>
+        </div>
+      )}
     </div>
   );
 }

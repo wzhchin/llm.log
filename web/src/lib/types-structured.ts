@@ -11,6 +11,21 @@ export type BoxType =
 
 export type Role = 'user' | 'assistant' | 'system' | 'tool';
 
+export interface RoleStyle {
+  /** Tailwind class for the left border accent (arbitrary value). */
+  border: string;
+  /** Tailwind class for the body background tint. */
+  bg: string;
+  /** Hex color used for the dot itself. */
+  dot: string;
+  /** rgba glow color for the dot. */
+  glow: string;
+  /** Tailwind class for the header background tint. */
+  headerBg: string;
+  /** Tailwind class for the header text color. */
+  headerText: string;
+}
+
 export interface TreeNode {
   id: string;
   type: BoxType;
@@ -28,37 +43,97 @@ export interface TreeNode {
   children: TreeNode[];
 }
 
-export const ROLE_STYLES: Record<string, { border: string; bg: string }> = {
-  user: { border: 'border-l-blue-500/40', bg: 'bg-blue-500/5' },
-  assistant: { border: 'border-l-emerald-500/40', bg: 'bg-emerald-500/5' },
-  system: { border: 'border-l-gray-500/40', bg: 'bg-gray-500/5' },
-  tool: { border: 'border-l-amber-500/40', bg: 'bg-amber-500/5' },
-  error: { border: 'border-l-red-500/50', bg: 'bg-red-500/10' },
-  thinking: { border: 'border-l-violet-500/40', bg: 'bg-violet-500/5' },
-  generic: { border: 'border-l-[var(--color-text-tertiary)]', bg: 'bg-[var(--color-surface-raised)]' },
-  root: { border: 'border-l-[var(--color-text-tertiary)]', bg: '' },
+// Viewer palette (mirrors index.css :root)
+const C = {
+  blue: '#6ba4f8',
+  green: '#7eb85c',
+  amber: '#d4a853',
+  violet: '#b392f0',
+  orange: '#e0964a',
+  red: '#e05555',
+} as const;
+
+export const ROLE_STYLES: Record<string, RoleStyle> = {
+  user: {
+    border: 'border-l-[rgba(107,164,248,0.4)]',
+    bg: 'bg-[rgba(107,164,248,0.05)]',
+    dot: C.blue,
+    glow: 'rgba(107,164,248,0.35)',
+    headerBg: 'bg-[rgba(107,164,248,0.06)]',
+    headerText: 'text-c-blue',
+  },
+  assistant: {
+    border: 'border-l-[rgba(179,146,240,0.4)]',
+    bg: 'bg-[rgba(179,146,240,0.05)]',
+    dot: C.violet,
+    glow: 'rgba(179,146,240,0.35)',
+    headerBg: 'bg-[rgba(179,146,240,0.06)]',
+    headerText: 'text-c-violet',
+  },
+  system: {
+    border: 'border-l-[rgba(107,164,248,0.4)]',
+    bg: 'bg-[rgba(107,164,248,0.05)]',
+    dot: C.blue,
+    glow: 'rgba(107,164,248,0.35)',
+    headerBg: 'bg-[rgba(107,164,248,0.06)]',
+    headerText: 'text-c-blue',
+  },
+  tool: {
+    border: 'border-l-[rgba(224,150,74,0.4)]',
+    bg: 'bg-[rgba(224,150,74,0.05)]',
+    dot: C.orange,
+    glow: 'rgba(224,150,74,0.35)',
+    headerBg: 'bg-[rgba(224,150,74,0.06)]',
+    headerText: 'text-c-orange',
+  },
+  error: {
+    border: 'border-l-[rgba(224,85,85,0.5)]',
+    bg: 'bg-[rgba(224,85,85,0.1)]',
+    dot: C.red,
+    glow: 'rgba(224,85,85,0.4)',
+    headerBg: 'bg-[rgba(224,85,85,0.08)]',
+    headerText: 'text-c-red',
+  },
+  thinking: {
+    border: 'border-l-[rgba(212,168,83,0.4)]',
+    bg: 'bg-[rgba(212,168,83,0.05)]',
+    dot: C.amber,
+    glow: 'rgba(212,168,83,0.35)',
+    headerBg: 'bg-[rgba(212,168,83,0.06)]',
+    headerText: 'text-c-amber',
+  },
+  generic: {
+    border: 'border-l-[var(--text-2)]',
+    bg: 'bg-[var(--bg-1)]',
+    dot: '#71717a',
+    glow: 'rgba(113,113,138,0.2)',
+    headerBg: 'bg-[var(--bg-1)]',
+    headerText: 'text-[var(--text-1)]',
+  },
+  root: {
+    border: 'border-l-[var(--text-2)]',
+    bg: '',
+    dot: '#71717a',
+    glow: 'rgba(113,113,138,0.2)',
+    headerBg: '',
+    headerText: 'text-[var(--text-1)]',
+  },
 };
 
 export const TYPE_ICONS: Record<BoxType, string> = {
   root: '',
-  system: '📄',
+  system: '',
   message: '',
   'content-block': '',
-  'tool-call': '🔧',
-  'tool-result': '🔧',
-  thinking: '💭',
-  error: '❌',
+  'tool-call': '',
+  'tool-result': '',
+  thinking: '',
+  error: '',
   generic: '',
 };
 
-export function getRoleIcon(type: BoxType, role?: Role): string {
-  if (type === 'message' || type === 'content-block') {
-    if (role === 'user') return '💬';
-    if (role === 'assistant') return '🤖';
-    if (role === 'system') return '📄';
-    if (role === 'tool') return '🔧';
-  }
-  return TYPE_ICONS[type];
+export function getRoleIcon(_type: BoxType, _role?: Role): string {
+  return '';
 }
 
 let _idCounter = 0;
@@ -73,5 +148,6 @@ export function resetIdCounter(): void {
 export interface ParsedResult {
   request: TreeNode;
   response: TreeNode;
+  finishReason?: string;
   error?: string;
 }

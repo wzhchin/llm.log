@@ -30,13 +30,13 @@ export function CopyableValue({ value, display, className = '', mono = false }: 
     >
       <span className={mono ? 'font-mono' : ''}>
         {copied ? (
-          <span className="text-emerald-400">{display || value}</span>
+          <span className="text-c-green">{display || value}</span>
         ) : (
           display || value
         )}
       </span>
       {copied ? (
-        <CheckIcon className="size-3 text-emerald-400 shrink-0" />
+        <CheckIcon className="size-3 text-c-green shrink-0" />
       ) : (
         <CopyIcon className="size-3 opacity-0 group-hover:opacity-40 transition-opacity shrink-0" />
       )}

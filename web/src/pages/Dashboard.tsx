@@ -11,7 +11,6 @@ import {
 
 import { usePolling } from '@/hooks/usePolling';
 import { useTimeRange } from '@/hooks/useTimeRange';
-import { useChameleon } from '@/hooks/useChameleon';
 import { fetchDashboard, fetchStatus } from '@/lib/api';
 import { formatCost, formatTokens, formatDelta, formatDate, formatAnimatedTokens, formatAnimatedCost, formatAnimatedNumber, formatAnimatedPercent } from '@/lib/utils';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
@@ -55,8 +54,8 @@ function MetricItem({ label, rawValue, formatter, delta }: MetricItemProps) {
         {formatter(animated)}
       </p>
       {delta && (
-        <p className={`text-[var(--text-small)] mt-2 font-medium ${delta.positive ? 'text-emerald-400' : 'text-red-400'}`}>
-          {delta.text} <span className="text-[var(--color-text-tertiary)] font-normal">vs prev</span>
+        <p className={`text-[var(--text-small)] mt-2 font-medium ${delta.positive ? 'text-c-green' : 'text-c-red'}`}>
+          {delta.text} <span className="text-[var(--text-2)] font-normal">vs prev</span>
         </p>
       )}
       {/* Accent underline — provider colored */}
@@ -100,19 +99,16 @@ export default function Dashboard() {
   const [chartTab, setChartTab] = useState<ChartTab>('requests');
   const { data: status } = usePolling(fetchStatus, 10000);
 
-  // Feed chameleon data
-  const { feedData } = useChameleon();
+  // Set CSS accent color to match dominant provider
   useEffect(() => {
     if (data) {
       const dominantProvider = data.by_provider[0]?.name;
-      feedData(data.totals.requests, status?.proxy_running ?? false, dominantProvider);
-      // Set CSS accent color to match dominant provider
       if (dominantProvider) {
         const color = getProviderColor(dominantProvider.toLowerCase(), 0);
         document.documentElement.style.setProperty('--accent-provider', color);
       }
     }
-  }, [data, status, feedData]);
+  }, [data, status]);
 
   const topModels = useMemo(() => {
     if (!data) return [];
@@ -134,7 +130,7 @@ export default function Dashboard() {
       <div className="space-y-6">
         <DateRangePicker />
         <EmptyState
-          icon={<span className="text-5xl">⚡</span>}
+          icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>}
           title="Couldn't load dashboard"
           description="The server might be warming up. Give it a moment."
           action={<Button variant="outline" size="sm" onClick={refresh}>Retry</Button>}
@@ -148,9 +144,9 @@ export default function Dashboard() {
       <div className="space-y-6">
         <DateRangePicker />
         <EmptyState
-          icon={<span className="text-5xl">🦎</span>}
+          icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>}
           title="No requests yet"
-          description="Start your proxy and make some LLM calls. Your chameleon is getting bored."
+          description="Start your proxy and make some LLM calls."
           action={<ProxyControl />}
         />
       </div>

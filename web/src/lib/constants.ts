@@ -1,30 +1,35 @@
+// Provider colors — mapped onto the viewer.html palette.
+// Hex values are required because recharts does not resolve CSS vars.
 export const PROVIDER_COLORS: Record<string, string> = {
-  openai: '#10b981',
-  anthropic: '#f97316',
-  deepseek: '#3b82f6',
-  groq: '#8b5cf6',
-  mistral: '#ef4444',
-  together: '#eab308',
-  fireworks: '#ec4899',
-  openrouter: '#06b6d4',
-  perplexity: '#a855f7',
-  xai: '#6366f1',
+  openai: '#7eb85c',      // green
+  anthropic: '#d4a853',   // amber
+  deepseek: '#6ba4f8',    // blue
+  groq: '#b392f0',        // violet
+  mistral: '#e05555',     // red
+  together: '#e0964a',    // orange
+  fireworks: '#f687b3',   // pink
+  openrouter: '#5cbfb5',  // cyan
+  perplexity: '#b392f0',  // violet
+  xai: '#6ba4f8',         // blue
 };
 
-export const FALLBACK_COLORS = ['#10b981', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444', '#eab308', '#ec4899', '#06b6d4', '#a855f7', '#6366f1'];
+export const FALLBACK_COLORS = [
+  '#d4a853', '#6ba4f8', '#5cbfb5', '#7eb85c', '#b392f0',
+  '#e0964a', '#e05555', '#f687b3',
+];
 
 export function getProviderColor(name: string, index: number = 0): string {
   return PROVIDER_COLORS[name.toLowerCase()] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 }
 
-// Chart colors — used in recharts (which needs raw hex, not CSS vars)
+// Chart colors — viewer palette
 export const CHART_COLORS = {
-  primary: '#10b981',     // main line/area (emerald)
-  input: '#3b82f6',       // input tokens (blue)
-  output: '#10b981',      // output tokens (emerald)
-  cacheRead: '#f59e0b',   // cache read (amber)
-  cacheWrite: '#8b5cf6',  // cache write (purple)
-  cost: '#10b981',        // cost charts (emerald)
-  cacheHit: '#10b981',    // cache hit rate (emerald)
-  latency: '#f97316',     // latency/duration (orange)
+  primary: '#d4a853',     // amber — main line/area
+  input: '#6ba4f8',       // blue — input tokens
+  output: '#7eb85c',      // green — output tokens
+  cacheRead: '#5cbfb5',   // cyan — cache read
+  cacheWrite: '#b392f0',  // violet — cache write
+  cost: '#d4a853',        // amber — cost charts
+  cacheHit: '#5cbfb5',    // cyan — cache hit rate
+  latency: '#e0964a',     // orange — latency
 } as const;

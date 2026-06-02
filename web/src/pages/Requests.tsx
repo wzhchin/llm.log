@@ -84,8 +84,8 @@ function DetailContent({
               <h2 className="text-lg font-semibold text-foreground truncate">
                 <CopyableValue value={detail.model} className="text-foreground text-lg font-semibold" />
               </h2>
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium tabular-nums shrink-0 ${
-                detail.status_code >= 400 ? 'bg-red-400/10 text-red-400' : 'bg-emerald-400/10 text-emerald-400'
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium tabular-nums shrink-0 font-mono ${
+                detail.status_code >= 400 ? 'bg-c-red/10 text-c-red' : 'bg-c-green/10 text-c-green'
               }`}>
                 {detail.status_code}
               </span>
@@ -287,7 +287,7 @@ export function Requests() {
         <>
           {error ? (
             <EmptyState
-              icon={<span className="text-5xl">⚡</span>}
+              icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>}
               title="Connection hiccup"
               description="Couldn't reach the server. It might be taking a nap."
               action={<Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry</Button>}
@@ -298,7 +298,7 @@ export function Requests() {
             </div>
           ) : items.length === 0 ? (
             <EmptyState
-              icon={<span className="text-5xl">🔍</span>}
+              icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>}
               title="No requests found"
               description="Try widening your filters or picking a different time range."
             />
@@ -341,7 +341,7 @@ export function Requests() {
                         <TableCell>
                           <span className="flex items-center gap-1.5">
                             <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-                              item.status_code >= 400 ? 'bg-red-400' : item.status_code >= 300 ? 'bg-amber-400' : 'bg-emerald-400'
+                              item.status_code >= 400 ? 'bg-c-red' : item.status_code >= 300 ? 'bg-c-amber' : 'bg-c-green'
                             }`} />
                             <span className="tabular-nums text-xs">{item.status_code}</span>
                           </span>
@@ -439,7 +439,7 @@ export function Requests() {
                 </div>
               ) : listItems.length === 0 ? (
                 <EmptyState
-                  icon={<span className="text-4xl">🔍</span>}
+                  icon={<span className="text-4xl font-mono opacity-30">{ '{}' }</span>}
                   title="No requests found"
                   description="Try widening your filters."
                 />
@@ -536,7 +536,7 @@ function CompactListItem({
         <span className="tabular-nums">{formatDuration(item.duration_ms)}</span>
         <span className="ml-auto flex items-center gap-1 shrink-0">
           <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-            item.status_code >= 400 ? 'bg-red-400' : item.status_code >= 300 ? 'bg-amber-400' : 'bg-emerald-400'
+            item.status_code >= 400 ? 'bg-c-red' : item.status_code >= 300 ? 'bg-c-amber' : 'bg-c-green'
           }`} />
           <span className="tabular-nums">{item.status_code}</span>
         </span>

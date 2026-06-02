@@ -27,7 +27,7 @@ export const MarkdownContent = memo(function MarkdownContent({
   if (isBase64Image) {
     return (
       <div className="rounded-lg bg-[var(--color-surface-raised)] border border-border p-4 text-center">
-        <span className="text-[var(--color-text-secondary)] text-sm">🖼️ Image (base64 data not displayed)</span>
+        <span className="text-[var(--color-text-secondary)] text-sm font-mono">[image — base64 data not displayed]</span>
       </div>
     );
   }
@@ -36,7 +36,6 @@ export const MarkdownContent = memo(function MarkdownContent({
   if (fileName) {
     return (
       <div className="rounded-lg bg-[var(--color-surface-raised)] border border-border p-3 flex items-center gap-3">
-        <span className="text-lg">📎</span>
         <div>
           <div className="text-sm font-medium text-foreground">{fileName}</div>
           {fileType && (
@@ -66,14 +65,9 @@ export const MarkdownContent = memo(function MarkdownContent({
     );
   }
 
-  // Markdown mode
+  // Markdown mode — custom CSS (not Tailwind prose)
   return (
-    <div className="prose prose-invert prose-sm max-w-none
-      prose-p:my-1 prose-pre:my-2 prose-pre:bg-[var(--color-surface-raised)] prose-pre:p-3 prose-pre:rounded-lg
-      prose-code:text-emerald-400 prose-code:before:content-none prose-code:after:content-none
-      prose-headings:text-foreground prose-a:text-emerald-400
-      prose-strong:text-foreground prose-code:font-mono prose-code:text-xs
-      prose-li:my-0.5 prose-ul:my-1 prose-ol:my-1">
+    <div className="md-content">
       <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
     </div>
   );

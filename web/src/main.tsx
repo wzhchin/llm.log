@@ -5,12 +5,12 @@ import App from "./App.tsx";
 
 if (import.meta.env.PROD) {
   console.log(
-    '%c🦎 llm.log',
-    'font-size: 24px; font-weight: bold; color: #10b981;'
+    '%cChatLog Viewer',
+    'font-size: 24px; font-weight: bold; color: #d4a853;'
   );
   console.log(
-    '%cMonitoring your LLM costs so you don\'t have to check your bank account.',
-    'font-size: 12px; color: #9ca3af;'
+    "%cllm.log — monitor your LLM costs.",
+    'font-size: 12px; color: #a09e96;'
   );
 }
 

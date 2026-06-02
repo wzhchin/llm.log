@@ -139,18 +139,18 @@ function parseAnthropic(req: unknown, res: unknown): ParsedResult {
     ],
   });
 
-  return { request, response };
+  return { request, response, finishReason: resObj?.stop_reason || undefined };
 }
 
 function parseAnthropicSystem(req: Record<string, any> | null): TreeNode[] {
   if (!req?.system) return [];
   const sys = req.system;
   if (typeof sys === 'string') {
-    return [makeNode({ type: 'system', role: 'system', label: '📄 System Prompt', rawLabel: 'system', text: sys })];
+    return [makeNode({ type: 'system', role: 'system', label: 'System Prompt', rawLabel: 'system', text: sys })];
   }
   if (Array.isArray(sys)) {
     const text = sys.map((b: any) => b.text ?? '').filter(Boolean).join('\n');
-    return [makeNode({ type: 'system', role: 'system', label: `📄 System Prompt (${sys.length} blocks)`, rawLabel: 'system', text })];
+    return [makeNode({ type: 'system', role: 'system', label: `System Prompt (${sys.length} blocks)`, rawLabel: 'system', text })];
   }
   return [];
 }
@@ -159,13 +159,12 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
   if (!Array.isArray(messages)) return [];
   return messages.map((msg, i) => {
     const role = msg.role ?? 'user';
-    const icon = role === 'user' ? '💬' : role === 'assistant' ? '🤖' : '📄';
     const content = msg.content;
 
     if (typeof content === 'string') {
       return makeNode({
         type: 'message', role: role as any,
-        label: `${icon} ${capitalize(role)}`,
+        label: `${capitalize(role)}`,
         rawLabel: `messages[${i}]`,
         text: content,
       });
@@ -185,19 +184,19 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
           const src = block.source;
           if (src?.type === 'base64') {
             children.push(makeNode({
-              type: 'content-block', label: '🖼️ Image (base64)', rawLabel: `messages[${i}].content[${j}]`,
+              type: 'content-block', label: 'Image (base64)', rawLabel: `messages[${i}].content[${j}]`,
               isBase64Image: true,
             }));
           } else if (src?.url) {
             children.push(makeNode({
-              type: 'content-block', label: '🖼️ Image', rawLabel: `messages[${i}].content[${j}]`,
+              type: 'content-block', label: 'Image', rawLabel: `messages[${i}].content[${j}]`,
               imageUrl: src.url,
             }));
           }
         } else if (block.type === 'tool_use') {
           children.push(makeNode({
             type: 'tool-call', role: 'tool',
-            label: `🔧 ${block.name ?? 'tool'}`,
+            label: `${block.name ?? 'tool'}`,
             rawLabel: `messages[${i}].content[${j}]`,
             metadata: { id: block.id ?? '', name: block.name ?? '' },
             text: jsonStringify(block.input),
@@ -210,7 +209,7 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
               : jsonStringify(block.content);
           children.push(makeNode({
             type: 'tool-result', role: 'tool',
-            label: `🔧 Tool Result${block.tool_use_id ? ` (${block.tool_use_id.slice(0, 8)})` : ''}`,
+            label: `Tool Result${block.tool_use_id ? ` (${block.tool_use_id.slice(0, 8)})` : ''}`,
             rawLabel: `messages[${i}].content[${j}]`,
             text: resultText,
           }));
@@ -223,7 +222,7 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
 
       return makeNode({
         type: 'message', role: role as any,
-        label: `${icon} ${capitalize(role)}${summary}`,
+        label: `${capitalize(role)}${summary}`,
         rawLabel: `messages[${i}]`,
         text: mainText || undefined,
         children,
@@ -232,7 +231,7 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
 
     return makeNode({
       type: 'message', role: role as any,
-      label: `${icon} ${capitalize(role)}`,
+      label: `${capitalize(role)}`,
       rawLabel: `messages[${i}]`,
       text: jsonStringify(content),
     });
@@ -246,7 +245,7 @@ function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNod
   if (typeof res.content === 'string') {
     return [makeNode({
       type: 'message', role: 'assistant',
-      label: '🤖 Assistant', rawLabel: 'content',
+      label: 'Assistant', rawLabel: 'content',
       text: res.content,
     })];
   }
@@ -265,14 +264,14 @@ function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNod
     } else if (block.type === 'thinking') {
       children.push(makeNode({
         type: 'thinking',
-        label: '💭 Thinking',
+        label: 'Thinking',
         rawLabel: `content[${i}]`,
         text: block.thinking ?? '',
       }));
     } else if (block.type === 'tool_use') {
       children.push(makeNode({
         type: 'tool-call', role: 'tool',
-        label: `🔧 ${block.name ?? 'tool'}`,
+        label: `${block.name ?? 'tool'}`,
         rawLabel: `content[${i}]`,
         metadata: { id: block.id ?? '', name: block.name ?? '' },
         text: jsonStringify(block.input),
@@ -286,7 +285,7 @@ function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNod
 
   return [makeNode({
     type: 'message', role: 'assistant',
-    label: `🤖 Assistant${summary}`,
+    label: `Assistant${summary}`,
     rawLabel: 'content',
     text: mainText || undefined,
     children,
@@ -296,7 +295,7 @@ function parseAnthropicResponseContent(res: Record<string, any> | null): TreeNod
 function parseAnthropicError(res: Record<string, any> | null): TreeNode[] {
   if (!res?.error) return [];
   const err = typeof res.error === 'string' ? res.error : res.error.message ?? jsonStringify(res.error);
-  return [makeNode({ type: 'error', label: '❌ Error', rawLabel: 'error', text: err })];
+  return [makeNode({ type: 'error', label: 'Error', rawLabel: 'error', text: err })];
 }
 
 // ---------------------------------------------------------------------------
@@ -320,7 +319,7 @@ function parseChatCompletions(req: unknown, res: unknown): ParsedResult {
   if (resObj && typeof resObj.content === 'string' && !resObj.choices) {
     resChildren.push(makeNode({
       type: 'message', role: 'assistant',
-      label: '🤖 Assistant', rawLabel: 'content',
+      label: 'Assistant', rawLabel: 'content',
       text: resObj.content,
     }));
   } else if (resObj?.choices) {
@@ -333,8 +332,10 @@ function parseChatCompletions(req: unknown, res: unknown): ParsedResult {
 
   if (resObj?.error) {
     const err = typeof resObj.error === 'string' ? resObj.error : resObj.error.message ?? jsonStringify(resObj.error);
-    resChildren.push(makeNode({ type: 'error', label: '❌ Error', rawLabel: 'error', text: err }));
+    resChildren.push(makeNode({ type: 'error', label: 'Error', rawLabel: 'error', text: err }));
   }
+
+  const finishReason = resObj?.choices?.[0]?.finish_reason || undefined;
 
   const response = makeNode({
     type: 'root', label: 'Response', rawLabel: 'response',
@@ -342,7 +343,7 @@ function parseChatCompletions(req: unknown, res: unknown): ParsedResult {
     children: resChildren,
   });
 
-  return { request, response };
+  return { request, response, finishReason };
 }
 
 function parseCCMessages(messages: any[] | undefined): TreeNode[] {
@@ -354,7 +355,7 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
     if (role === 'system') {
       return makeNode({
         type: 'system', role: 'system',
-        label: '📄 System Prompt', rawLabel: `messages[${i}]`,
+        label: 'System Prompt', rawLabel: `messages[${i}]`,
         text: typeof msg.content === 'string' ? msg.content : jsonStringify(msg.content),
       });
     }
@@ -363,14 +364,13 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
     if (role === 'tool') {
       return makeNode({
         type: 'tool-result', role: 'tool',
-        label: `🔧 Tool Result${msg.tool_call_id ? ` (${msg.tool_call_id.slice(0, 8)})` : ''}`,
+        label: `Tool Result${msg.tool_call_id ? ` (${msg.tool_call_id.slice(0, 8)})` : ''}`,
         rawLabel: `messages[${i}]`,
         text: typeof msg.content === 'string' ? msg.content : jsonStringify(msg.content),
       });
     }
 
     // User / Assistant
-    const icon = role === 'user' ? '💬' : '🤖';
     const children: TreeNode[] = [];
 
     // Tool calls in assistant message
@@ -379,7 +379,7 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
         const fn = tc.function ?? {};
         children.push(makeNode({
           type: 'tool-call', role: 'tool',
-          label: `🔧 ${fn.name ?? 'tool'}`,
+          label: `${fn.name ?? 'tool'}`,
           rawLabel: `messages[${i}].tool_calls[${tc.index ?? 0}]`,
           metadata: { id: tc.id ?? '', name: fn.name ?? '' },
           text: fn.arguments ?? '',
@@ -391,7 +391,7 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
 
     return makeNode({
       type: 'message', role: role as any,
-      label: `${icon} ${capitalize(role)}`,
+      label: `${capitalize(role)}`,
       rawLabel: `messages[${i}]`,
       text: contentText || undefined,
       children,
@@ -408,7 +408,7 @@ function parseCCAssistantMessage(msg: Record<string, any>, choiceIdx: number): T
       const fn = tc.function ?? {};
       children.push(makeNode({
         type: 'tool-call', role: 'tool',
-        label: `🔧 ${fn.name ?? 'tool'}`,
+        label: `${fn.name ?? 'tool'}`,
         rawLabel: `choices[${choiceIdx}].message.tool_calls[${tc.index ?? 0}]`,
         metadata: { id: tc.id ?? '', name: fn.name ?? '' },
         text: fn.arguments ?? '',
@@ -420,7 +420,7 @@ function parseCCAssistantMessage(msg: Record<string, any>, choiceIdx: number): T
 
   return [makeNode({
     type: 'message', role: role as any,
-    label: `🤖 ${capitalize(role)}${msg.tool_calls?.length ? ` (+${msg.tool_calls.length} tool calls)` : ''}`,
+    label: `${capitalize(role)}${msg.tool_calls?.length ? ` (+${msg.tool_calls.length} tool calls)` : ''}`,
     rawLabel: `choices[${choiceIdx}].message`,
     text: contentText || undefined,
     children,
@@ -454,14 +454,16 @@ function parseResponsesAPI(req: unknown, res: unknown): ParsedResult {
     ],
   });
 
-  return { request, response };
+  const finishReason = resObj?.status || undefined;
+
+  return { request, response, finishReason };
 }
 
 function parseResponsesInstructions(req: Record<string, any> | null): TreeNode[] {
   if (!req?.instructions) return [];
   return [makeNode({
     type: 'system', role: 'system',
-    label: '📄 Instructions', rawLabel: 'instructions',
+    label: 'Instructions', rawLabel: 'instructions',
     text: typeof req.instructions === 'string' ? req.instructions : jsonStringify(req.instructions),
   })];
 }
@@ -473,7 +475,7 @@ function parseResponsesInput(req: Record<string, any> | null): TreeNode[] {
   if (typeof input === 'string') {
     return [makeNode({
       type: 'message', role: 'user',
-      label: '💬 User', rawLabel: 'input',
+      label: 'User', rawLabel: 'input',
       text: input,
     })];
   }
@@ -483,26 +485,25 @@ function parseResponsesInput(req: Record<string, any> | null): TreeNode[] {
       if (typeof item === 'string') {
         return makeNode({
           type: 'message', role: 'user',
-          label: '💬 User', rawLabel: `input[${i}]`,
+          label: 'User', rawLabel: `input[${i}]`,
           text: item,
         });
       }
       if (item?.type === 'message' || item?.role) {
         const role = item.role ?? 'user';
-        const icon = role === 'user' ? '💬' : role === 'assistant' ? '🤖' : '📄';
         const text = typeof item.content === 'string' ? item.content
           : Array.isArray(item.content) ? item.content.map((c: any) => c.text ?? '').join('')
           : jsonStringify(item.content);
         return makeNode({
           type: 'message', role: role as any,
-          label: `${icon} ${capitalize(role)}`, rawLabel: `input[${i}]`,
+          label: `${capitalize(role)}`, rawLabel: `input[${i}]`,
           text,
         });
       }
       if (item?.type === 'function_call_output') {
         return makeNode({
           type: 'tool-result', role: 'tool',
-          label: `🔧 Function Output${item.call_id ? ` (${item.call_id.slice(0, 8)})` : ''}`,
+          label: `Function Output${item.call_id ? ` (${item.call_id.slice(0, 8)})` : ''}`,
           rawLabel: `input[${i}]`,
           text: item.output ?? '',
         });
@@ -524,7 +525,7 @@ function parseResponsesOutput(res: Record<string, any> | null): TreeNode[] {
   if (typeof res.content === 'string' && !res.output) {
     return [makeNode({
       type: 'message', role: 'assistant',
-      label: '🤖 Assistant', rawLabel: 'content',
+      label: 'Assistant', rawLabel: 'content',
       text: res.content,
     })];
   }
@@ -534,7 +535,6 @@ function parseResponsesOutput(res: Record<string, any> | null): TreeNode[] {
   return res.output.map((item: any, i: number) => {
     if (item?.type === 'message') {
       const role = item.role ?? 'assistant';
-      const icon = role === 'user' ? '💬' : '🤖';
       const contentParts: string[] = [];
       const children: TreeNode[] = [];
 
@@ -545,7 +545,7 @@ function parseResponsesOutput(res: Record<string, any> | null): TreeNode[] {
             contentParts.push(part.text ?? '');
           } else if (part?.type === 'image') {
             children.push(makeNode({
-              type: 'content-block', label: '🖼️ Image', rawLabel: `output[${i}].content[${j}]`,
+              type: 'content-block', label: 'Image', rawLabel: `output[${i}].content[${j}]`,
               imageUrl: part.image_url?.url ?? part.url,
             }));
           } else if (part?.text) {
@@ -558,7 +558,7 @@ function parseResponsesOutput(res: Record<string, any> | null): TreeNode[] {
 
       return makeNode({
         type: 'message', role: role as any,
-        label: `${icon} ${capitalize(role)}`,
+        label: `${capitalize(role)}`,
         rawLabel: `output[${i}]`,
         text: contentParts.join('\n') || undefined,
         children,
@@ -568,7 +568,7 @@ function parseResponsesOutput(res: Record<string, any> | null): TreeNode[] {
     if (item?.type === 'function_call') {
       return makeNode({
         type: 'tool-call', role: 'tool',
-        label: `🔧 ${item.name ?? 'function'}`,
+        label: `${item.name ?? 'function'}`,
         rawLabel: `output[${i}]`,
         metadata: { call_id: item.call_id ?? '', name: item.name ?? '' },
         text: item.arguments ?? '',
@@ -578,7 +578,7 @@ function parseResponsesOutput(res: Record<string, any> | null): TreeNode[] {
     if (item?.type === 'function_call_output') {
       return makeNode({
         type: 'tool-result', role: 'tool',
-        label: `🔧 Function Output${item.call_id ? ` (${item.call_id.slice(0, 8)})` : ''}`,
+        label: `Function Output${item.call_id ? ` (${item.call_id.slice(0, 8)})` : ''}`,
         rawLabel: `output[${i}]`,
         text: item.output ?? '',
       });
@@ -594,7 +594,7 @@ function parseResponsesOutput(res: Record<string, any> | null): TreeNode[] {
 function parseResponsesError(res: Record<string, any> | null): TreeNode[] {
   if (!res?.error) return [];
   const err = typeof res.error === 'string' ? res.error : res.error.message ?? jsonStringify(res.error);
-  return [makeNode({ type: 'error', label: '❌ Error', rawLabel: 'error', text: err })];
+  return [makeNode({ type: 'error', label: 'Error', rawLabel: 'error', text: err })];
 }
 
 // ---------------------------------------------------------------------------

@@ -155,7 +155,7 @@ export default function Analytics() {
       <div className="space-y-6">
         <DateRangePicker />
         <EmptyState
-          icon={<span className="text-5xl">⚡</span>}
+          icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>}
           title="Couldn't load analytics"
           description="The server might be warming up. Give it a moment."
           action={<Button variant="outline" size="sm" onClick={refresh}>Retry</Button>}
@@ -168,7 +168,7 @@ export default function Analytics() {
     return (
       <div className="space-y-6">
         <DateRangePicker />
-        <EmptyState icon={<span className="text-5xl">📊</span>} title="No analytics data yet" description="Start routing requests through the proxy to see charts light up." />
+        <EmptyState icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>} title="No analytics data yet" description="Start routing requests through the proxy to see charts light up." />
       </div>
     );
   }
@@ -315,9 +315,9 @@ export default function Analytics() {
                 return (
                   <div key={item.label} className="flex items-center gap-3">
                     <span className="w-8 text-xs text-[var(--color-text-tertiary)] text-right font-mono">{item.label}</span>
-                    <div className="flex-1 h-5 bg-border rounded overflow-hidden">
+                    <div className="flex-1 h-5 bg-[var(--bg-2)] rounded overflow-hidden">
                       <div
-                        className="h-full bg-emerald-500 rounded"
+                        className="h-full bg-c-amber rounded"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -346,7 +346,7 @@ export default function Analytics() {
                 {top_expensive.map((req) => (
                   <TableRow key={req.id}>
                     <TableCell>
-                      <Link to={`/requests/${req.id}`} className="text-emerald-400 hover:underline">
+                      <Link to={`/requests/${req.id}`} className="text-c-amber hover:underline">
                         {formatDate(req.timestamp)}
                       </Link>
                     </TableCell>

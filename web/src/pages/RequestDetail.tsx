@@ -14,14 +14,14 @@ import type { RequestDetailResponse } from '@/lib/types';
 function StatusBadge({ code }: { code: number }) {
   if (code >= 200 && code < 300) {
     return (
-      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+      <Badge className="bg-c-green/15 text-c-green border-c-green/30">
         {code}
       </Badge>
     );
   }
   if (code >= 400) {
     return (
-      <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+      <Badge className="bg-c-red/15 text-c-red border-c-red/30">
         {code}
       </Badge>
     );

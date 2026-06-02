@@ -71,7 +71,7 @@ export function FilterBar({ filters }: FilterBarProps) {
         </div>
 
         {searchInput && (
-          <Badge variant="outline" className="gap-1 text-amber-400 border-amber-400/30">
+          <Badge variant="outline" className="gap-1 text-c-amber border-c-amber/30">
             <AlertTriangleIcon className="size-3" />
             Search may be slow for large datasets
           </Badge>
