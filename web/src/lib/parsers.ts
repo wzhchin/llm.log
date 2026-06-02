@@ -296,17 +296,6 @@ function parseAnthropicMessages(messages: any[] | undefined): TreeNode[] {
         }
       }
 
-      // If the message has only tool-related blocks,
-      // promote the tool blocks directly to avoid double-boxing.
-      const allToolChildren = children.length > 0
-        && children.every(c => c.type === 'tool-call' || c.type === 'tool-result');
-      if (allToolChildren) {
-        children.forEach((c, ci) => {
-          c.rawLabel = `messages[${i}].content[${ci}]`;
-        });
-        return children;
-      }
-
       const blockCount = content.length;
       const summary = blockCount > 1 ? ` (${blockCount} blocks)` : '';
 
@@ -502,17 +491,6 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
       }));
     }
 
-    // If assistant message has only tool_calls and no text content,
-    // promote tool blocks directly to avoid double-boxing.
-    const allToolChildren = children.length > 0
-      && children.every(c => c.type === 'tool-call' || c.type === 'tool-result');
-    if (!contentText && allToolChildren) {
-      children.forEach((c, ci) => {
-        c.rawLabel = `messages[${i}].tool_calls[${ci}]`;
-      });
-      return children;
-    }
-
     return makeNode({
       type: 'message', role: role as any,
       label: `${capitalize(role)}`,
@@ -520,7 +498,7 @@ function parseCCMessages(messages: any[] | undefined): TreeNode[] {
       text: contentText || undefined,
       children,
     });
-  }).flat();
+  });
 }
 
 function parseCCAssistantMessage(msg: Record<string, any>, choiceIdx: number): TreeNode[] {
