@@ -19,10 +19,11 @@ export const StructuredBox = memo(function StructuredBox({
   const hasContent = !!(node.text || node.imageUrl || node.isBase64Image || node.fileName);
   const isCollapsible = hasChildren || hasContent;
 
-  // Resolve style key: thinking/error/tool have their own styles, others use role
+  // Resolve style key: tool-call → orange, tool-result → cyan
   const styleKey = node.type === 'thinking' ? 'thinking'
     : node.type === 'error' ? 'error'
-    : node.type === 'tool-call' || node.type === 'tool-result' ? 'tool'
+    : node.type === 'tool-call' ? 'tool'
+    : node.type === 'tool-result' ? 'tool-rsp'
     : node.role ?? 'generic';
   const style = ROLE_STYLES[styleKey] ?? ROLE_STYLES.generic;
 
@@ -33,6 +34,7 @@ export const StructuredBox = memo(function StructuredBox({
   const dataRole = styleKey === 'thinking' ? 'assistant'
     : styleKey === 'error' ? 'tool'
     : styleKey === 'tool' ? 'tool'
+    : styleKey === 'tool-rsp' ? 'tool-rsp'
     : node.role ?? 'system';
 
   const handleHeaderClick = useCallback(() => {

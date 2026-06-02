@@ -391,10 +391,12 @@
 .msg[data-r="user"]      .msg-hd { background: rgba(61,140,46,0.06);   color: var(--c-green); }
 .msg[data-r="assistant"] .msg-hd { background: rgba(124,58,237,0.06); color: var(--c-violet); }
 .msg[data-r="tool"]      .msg-hd { background: rgba(196,106,26,0.06);   color: var(--c-orange); }
+.msg[data-r="tool-rsp"]  .msg-hd { background: rgba(14,138,126,0.06);   color: var(--c-cyan); }
 .msg[data-r="system"]    { border-color: rgba(37,99,235,0.25); }
 .msg[data-r="user"]      { border-color: rgba(61,140,46,0.25); }
 .msg[data-r="assistant"] { border-color: rgba(124,58,237,0.25); }
 .msg[data-r="tool"]      { border-color: rgba(196,106,26,0.25); }
+.msg[data-r="tool-rsp"]  { border-color: rgba(14,138,126,0.25); }
 .msg-hd-idx { color: var(--text-2); }
 .msg-hd-extra { color: var(--text-2); font-weight: 400; }
 

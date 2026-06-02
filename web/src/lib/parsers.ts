@@ -74,7 +74,8 @@ function makeNode(p: {
 }): TreeNode {
   const styleKey = p.type === 'thinking' ? 'thinking'
     : p.type === 'error' ? 'error'
-    : p.type === 'tool-call' || p.type === 'tool-result' ? 'tool'
+    : p.type === 'tool-call' ? 'tool'
+    : p.type === 'tool-result' ? 'tool-rsp'
     : p.role ?? 'generic';
   const s = ROLE_STYLES[styleKey] ?? ROLE_STYLES.generic;
   return {

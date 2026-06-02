@@ -51,6 +51,7 @@ const C = {
   violet: '#7c3aed',
   orange: '#c46a1a',
   red: '#dc2626',
+  cyan: '#0e8a7e',
 } as const;
 
 export const ROLE_STYLES: Record<string, RoleStyle> = {
@@ -85,6 +86,14 @@ export const ROLE_STYLES: Record<string, RoleStyle> = {
     glow: 'rgba(196,106,26,0.25)',
     headerBg: 'bg-[rgba(196,106,26,0.06)]',
     headerText: 'text-c-orange',
+  },
+  'tool-rsp': {
+    border: 'border-l-[rgba(14,138,126,0.4)]',
+    bg: 'bg-[rgba(14,138,126,0.04)]',
+    dot: C.cyan,
+    glow: 'rgba(14,138,126,0.25)',
+    headerBg: 'bg-[rgba(14,138,126,0.06)]',
+    headerText: 'text-c-cyan',
   },
   error: {
     border: 'border-l-[rgba(220,38,38,0.4)]',
