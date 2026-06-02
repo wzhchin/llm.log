@@ -4,6 +4,40 @@ import { Input } from '@/components/ui/input';
 
 const MAX_LOOKBACK_MINUTES = 30 * 24 * 60; // 30 days
 
+/**
+ * Non-linear mapping: position (0-1) ↔ minutes (0-MAX)
+ *
+ * Using power curve (k=2):
+ *   minutes = MAX × position²
+ *
+ * This gives fine granularity near "now" (left) and coarser
+ * jumps further back (right). The first 30% of the slider
+ * covers ~2.7 days; the last 30% covers ~14 days.
+ */
+const CURVE_POWER = 2;
+
+function positionToMinutes(pos: number): number {
+  return MAX_LOOKBACK_MINUTES * Math.pow(pos, CURVE_POWER);
+}
+
+function minutesToPosition(mins: number): number {
+  return Math.pow(mins / MAX_LOOKBACK_MINUTES, 1 / CURVE_POWER);
+}
+
+/**
+ * Adaptive snap: finer steps near now, coarser steps far away.
+ * - 0–6h ago:  15min steps
+ * - 6h–2d ago: 1h steps
+ * - 2d–7d ago: 3h steps
+ * - 7d+:       12h steps
+ */
+function snapMinutes(m: number): number {
+  if (m < 6 * 60) return Math.round(m / 15) * 15;
+  if (m < 2 * 24 * 60) return Math.round(m / 60) * 60;
+  if (m < 7 * 24 * 60) return Math.round(m / (3 * 60)) * 3 * 60;
+  return Math.round(m / (12 * 60)) * 12 * 60;
+}
+
 function toLocalDatetime(iso: string): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -32,12 +66,12 @@ export function DateRangePicker() {
       const track = trackRef.current;
       if (!track) return;
       const rect = track.getBoundingClientRect();
-      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const minutes = Math.round((ratio * MAX_LOOKBACK_MINUTES) / 60) * 60; // snap to 1h
-      const clamped = Math.max(0, Math.min(MAX_LOOKBACK_MINUTES, minutes));
+      const pos = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const rawMinutes = positionToMinutes(pos);
+      const minutes = Math.max(0, Math.min(MAX_LOOKBACK_MINUTES, snapMinutes(rawMinutes)));
 
-      const newLo = thumb === 'lo' ? clamped : lo;
-      const newHi = thumb === 'hi' ? clamped : hi;
+      const newLo = thumb === 'lo' ? minutes : lo;
+      const newHi = thumb === 'hi' ? minutes : hi;
 
       // lo = toAgo (closer to now), hi = fromAgo (further back)
       const newTo = new Date(now - newLo * 60000).toISOString();
@@ -63,8 +97,9 @@ export function DateRangePicker() {
     [updateFromPointer],
   );
 
-  const loPct = (lo / MAX_LOOKBACK_MINUTES) * 100;
-  const hiPct = (hi / MAX_LOOKBACK_MINUTES) * 100;
+  // Convert minutes back to slider position (non-linear)
+  const loPct = minutesToPosition(lo) * 100;
+  const hiPct = minutesToPosition(hi) * 100;
 
   return (
     <div className="flex items-center gap-3">
