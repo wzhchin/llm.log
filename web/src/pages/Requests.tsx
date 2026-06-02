@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowUpIcon, ArrowDownIcon, ExternalLinkIcon, Loader2Icon, ChevronLeftIcon, ChevronRightIcon, Maximize2Icon, XIcon } from 'lucide-react';
 import { CopyableValue } from '@/components/CopyableValue';
-import { DateRangePicker } from '@/components/DateRangePicker';
 import { FilterBar } from '@/components/FilterBar';
 import { StructuredView } from '@/components/structured/StructuredView';
 import { EmptyState } from '@/components/EmptyState';
@@ -274,11 +273,8 @@ export function Requests() {
   return (
     <div className="flex flex-col gap-4 animate-stagger">
       {/* Toolbar */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-foreground">Requests</h1>
-          <DateRangePicker />
-        </div>
+      <div className="flex flex-col items-center gap-3">
+        <h1 className="text-xl font-bold text-foreground self-start">Requests</h1>
         <FilterBar filters={filters} />
       </div>
 

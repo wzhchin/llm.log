@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { ProxyControl } from './ProxyControl';
+import { DateRangePicker } from './DateRangePicker';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -42,7 +43,8 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
-          <div className="flex-1 flex justify-end">
+          <div className="flex-1 flex items-center justify-end gap-3">
+            <DateRangePicker />
             <ProxyControl />
           </div>
         </div>

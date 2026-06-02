@@ -3,7 +3,6 @@ import { Loader2Icon } from 'lucide-react';
 import { usePolling } from '@/hooks/usePolling';
 import { useTimeRange } from '@/hooks/useTimeRange';
 import { fetchAnalytics } from '@/lib/api';
-import { DateRangePicker } from '@/components/DateRangePicker';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCost, formatTokens, formatDate, formatDuration } from '@/lib/utils';
@@ -153,7 +152,6 @@ export default function Analytics() {
   if (error && !data) {
     return (
       <div className="space-y-6">
-        <DateRangePicker />
         <EmptyState
           icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>}
           title="Couldn't load analytics"
@@ -167,7 +165,6 @@ export default function Analytics() {
   if (!data || data.over_time.length === 0) {
     return (
       <div className="space-y-6">
-        <DateRangePicker />
         <EmptyState icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>} title="No analytics data yet" description="Start routing requests through the proxy to see charts light up." />
       </div>
     );
@@ -187,14 +184,14 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6 animate-stagger">
-      <DateRangePicker />
-
       <Tabs defaultValue="cost">
-        <TabsList>
-          <TabsTrigger value="cost">Cost</TabsTrigger>
-          <TabsTrigger value="tokens">Tokens</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-        </TabsList>
+        <div className="flex justify-center">
+          <TabsList>
+            <TabsTrigger value="cost">Cost</TabsTrigger>
+            <TabsTrigger value="tokens">Tokens</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Cost Tab */}
         <TabsContent value="cost" className="space-y-8 mt-6 animate-fade-in">

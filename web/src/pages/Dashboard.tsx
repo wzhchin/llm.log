@@ -15,7 +15,6 @@ import { fetchDashboard, fetchStatus } from '@/lib/api';
 import { formatCost, formatTokens, formatDelta, formatDate, formatAnimatedTokens, formatAnimatedCost, formatAnimatedNumber, formatAnimatedPercent } from '@/lib/utils';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { getProviderColor, CHART_COLORS } from '@/lib/constants';
-import { DateRangePicker } from '@/components/DateRangePicker';
 import { SectionHeading } from '@/components/SectionHeading';
 import { ContributionHeatmap } from '@/components/ContributionHeatmap';
 import { CopyableValue } from '@/components/CopyableValue';
@@ -128,7 +127,6 @@ export default function Dashboard() {
   if (error && !data) {
     return (
       <div className="space-y-6">
-        <DateRangePicker />
         <EmptyState
           icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>}
           title="Couldn't load dashboard"
@@ -142,7 +140,6 @@ export default function Dashboard() {
   if (!data || data.totals.requests === 0) {
     return (
       <div className="space-y-6">
-        <DateRangePicker />
         <EmptyState
           icon={<span className="text-5xl font-mono opacity-30">{ '{}' }</span>}
           title="No requests yet"
@@ -184,8 +181,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-stagger">
-      <DateRangePicker />
-
       {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-8" data-chameleon-perch>
         <MetricItem
@@ -230,11 +225,13 @@ export default function Dashboard() {
             value={chartTab}
             onValueChange={(v) => setChartTab(v as ChartTab)}
           >
-            <TabsList>
-              <TabsTrigger value="requests">Requests</TabsTrigger>
-              <TabsTrigger value="cost">Cost</TabsTrigger>
-              <TabsTrigger value="tokens">Tokens</TabsTrigger>
-            </TabsList>
+            <div className="flex justify-center">
+              <TabsList>
+                <TabsTrigger value="requests">Requests</TabsTrigger>
+                <TabsTrigger value="cost">Cost</TabsTrigger>
+                <TabsTrigger value="tokens">Tokens</TabsTrigger>
+              </TabsList>
+            </div>
           </Tabs>
         </div>
         <div className="h-[280px] sm:h-[400px]">
