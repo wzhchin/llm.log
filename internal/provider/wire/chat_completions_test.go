@@ -276,5 +276,108 @@ func TestChatCompletions_ParseStream_AudioTokens(t *testing.T) {
 	}
 	if d.AudioOutputTokens != 30 {
 		t.Errorf("audio output = %d, want 30", d.AudioOutputTokens)
+		}
 	}
-}
+
+	func TestChatCompletions_ParseStream_ToolCallsOnly(t *testing.T) {
+		events := []SSEEvent{
+			{Data: []byte(`{"model":"gpt-4","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_abc","type":"function","function":{"name":"get_weather","arguments":""}}]}}]}`)},
+			{Data: []byte(`{"model":"gpt-4","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"ci"}}]}}]}`)},
+			{Data: []byte(`{"model":"gpt-4","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"ty\":\"Paris\"}"}}]}}]}`)},
+			{Data: []byte(`{"model":"gpt-4","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":20}}`)},
+			{Data: []byte("[DONE]")},
+		}
+
+		r, err := ChatCompletions.ParseStream(events)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Model != "gpt-4" {
+			t.Errorf("model = %q", r.Model)
+		}
+		if r.OutputTokens != 20 {
+			t.Errorf("output = %d, want 20", r.OutputTokens)
+		}
+
+		var body struct {
+			Choices []struct {
+				Message struct {
+					Role      string `json:"role"`
+					Content   string `json:"content"`
+					ToolCalls []struct {
+						ID       string `json:"id"`
+						Type     string `json:"type"`
+						Function struct {
+							Name      string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
+				} `json:"message"`
+			} `json:"choices"`
+		}
+		json.Unmarshal(r.ResponseBody, &body)
+
+		if len(body.Choices) != 1 {
+			t.Fatalf("choices = %d, want 1", len(body.Choices))
+		}
+		msg := body.Choices[0].Message
+		if msg.Role != "assistant" {
+			t.Errorf("role = %q", msg.Role)
+		}
+		if len(msg.ToolCalls) != 1 {
+			t.Fatalf("tool_calls = %d, want 1", len(msg.ToolCalls))
+		}
+		tc := msg.ToolCalls[0]
+		if tc.ID != "call_abc" {
+			t.Errorf("id = %q", tc.ID)
+		}
+		if tc.Function.Name != "get_weather" {
+			t.Errorf("name = %q", tc.Function.Name)
+		}
+		if tc.Function.Arguments != `{"city":"Paris"}` {
+			t.Errorf("arguments = %q", tc.Function.Arguments)
+		}
+	}
+
+	func TestChatCompletions_ParseStream_TextAndToolCalls(t *testing.T) {
+		events := []SSEEvent{
+			{Data: []byte(`{"model":"gpt-4","choices":[{"delta":{"content":"Let me check "}}]}`)},
+			{Data: []byte(`{"model":"gpt-4","choices":[{"delta":{"content":"that."}}]}`)},
+			{Data: []byte(`{"model":"gpt-4","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"search","arguments":"{\"q\":"}}]}}]}`)},
+			{Data: []byte(`{"model":"gpt-4","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"test\"}"}}]}}]}`)},
+			{Data: []byte(`{"model":"gpt-4","choices":[],"usage":{"prompt_tokens":50,"completion_tokens":30}}`)},
+			{Data: []byte("[DONE]")},
+		}
+
+		r, err := ChatCompletions.ParseStream(events)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var body struct {
+			Choices []struct {
+				Message struct {
+					Role      string `json:"role"`
+					Content   string `json:"content"`
+					ToolCalls []struct {
+						Function struct {
+							Name      string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
+				} `json:"message"`
+			} `json:"choices"`
+		}
+		json.Unmarshal(r.ResponseBody, &body)
+
+		msg := body.Choices[0].Message
+		if msg.Content != "Let me check that." {
+			t.Errorf("content = %q", msg.Content)
+		}
+		if len(msg.ToolCalls) != 1 {
+			t.Fatalf("tool_calls = %d, want 1", len(msg.ToolCalls))
+		}
+		if msg.ToolCalls[0].Function.Arguments != `{"q":"test"}` {
+			t.Errorf("arguments = %q", msg.ToolCalls[0].Function.Arguments)
+		}
+	}

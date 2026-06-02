@@ -5,7 +5,6 @@
 package wire
 
 import (
-	"encoding/json"
 	"strings"
 )
 
@@ -70,13 +69,6 @@ type Result struct {
 type SSEEvent struct {
 	Event string
 	Data  []byte
-}
-
-// reconstructStreamBody builds a minimal JSON response body from streaming data.
-// Used by all stream parsers to reconstruct a storable response.
-func reconstructStreamBody(model, content string) []byte {
-	b, _ := json.Marshal(map[string]any{"model": model, "content": content})
-	return b
 }
 
 func matchPath(path, suffix string) bool {

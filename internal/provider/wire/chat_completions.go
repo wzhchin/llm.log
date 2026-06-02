@@ -130,35 +130,78 @@ func parseCCResponse(body []byte, mapUsage usageMapper) (*Result, error) {
 	return r, nil
 }
 
+// ccToolCall tracks an in-progress tool call during streaming.
+type ccToolCall struct {
+	id        string
+	callType  string // usually "function"
+	fnName    string
+	fnArgs    strings.Builder
+}
+
 // parseCCStream parses a streaming Chat Completions-style response.
+// Captures text content, tool_calls, and token usage.
 func parseCCStream(events []SSEEvent, mapUsage usageMapper) (*Result, error) {
 	var result Result
 	var content strings.Builder
-	var chunk struct {
-		Model   string `json:"model"`
-		Choices []struct {
-			Delta struct {
-				Content string `json:"content"`
-			} `json:"delta"`
-		} `json:"choices"`
-		Usage json.RawMessage `json:"usage"`
-	}
+
+	// Tool calls keyed by index.
+	var toolCalls []ccToolCall
 
 	for _, ev := range events {
 		if string(ev.Data) == "[DONE]" {
 			continue
 		}
-		chunk.Model = ""
-		chunk.Choices = chunk.Choices[:0]
-		chunk.Usage = chunk.Usage[:0]
+		// Declare chunk inside the loop so each iteration gets a zero-valued
+		// struct. Reusing a single struct across iterations causes stale field
+		// values (e.g. Delta.Content persisting when a chunk only has ToolCalls).
+		var chunk struct {
+			Model   string `json:"model"`
+			Choices []struct {
+				Delta struct {
+					Content   string `json:"content"`
+					ToolCalls []struct {
+						Index    int    `json:"index"`
+						ID       string `json:"id"`
+						Type     string `json:"type"`
+						Function struct {
+							Name      string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
+				} `json:"delta"`
+			} `json:"choices"`
+			Usage json.RawMessage `json:"usage"`
+		}
 		if json.Unmarshal(ev.Data, &chunk) != nil {
 			continue
 		}
 		if result.Model == "" && chunk.Model != "" {
 			result.Model = chunk.Model
 		}
-		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-			content.WriteString(chunk.Choices[0].Delta.Content)
+		if len(chunk.Choices) > 0 {
+			choice := &chunk.Choices[0]
+			if choice.Delta.Content != "" {
+				content.WriteString(choice.Delta.Content)
+			}
+			for _, tc := range choice.Delta.ToolCalls {
+				// Extend slice if needed.
+				for len(toolCalls) <= tc.Index {
+					toolCalls = append(toolCalls, ccToolCall{})
+				}
+				entry := &toolCalls[tc.Index]
+				if tc.ID != "" {
+					entry.id = tc.ID
+				}
+				if tc.Type != "" {
+					entry.callType = tc.Type
+				}
+				if tc.Function.Name != "" {
+					entry.fnName = tc.Function.Name
+				}
+				if tc.Function.Arguments != "" {
+					entry.fnArgs.WriteString(tc.Function.Arguments)
+				}
+			}
 		}
 		if len(chunk.Usage) > 0 {
 			u := mapUsage(chunk.Usage)
@@ -177,8 +220,70 @@ func parseCCStream(events []SSEEvent, mapUsage usageMapper) (*Result, error) {
 		}
 	}
 
-	result.ResponseBody = reconstructStreamBody(result.Model, content.String())
+	result.ResponseBody = reconstructCCStreamBody(result.Model, content.String(), toolCalls)
 	return &result, nil
+}
+
+// reconstructCCStreamBody builds a JSON response body that the frontend
+// parser (parseChatCompletions) can consume.
+// If tool calls are present, produces {"model":"...","choices":[{"message":{...}}]}.
+// Otherwise falls back to {"model":"...","content":"..."} for backward compatibility.
+func reconstructCCStreamBody(model, textContent string, toolCalls []ccToolCall) []byte {
+	// If no tool calls, use the simple format the frontend already handles.
+	if len(toolCalls) == 0 {
+		b, _ := json.Marshal(map[string]any{"model": model, "content": textContent})
+		return b
+	}
+
+	type functionInfo struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	}
+	type toolCallInfo struct {
+		ID       string       `json:"id"`
+		Type     string       `json:"type"`
+		Function functionInfo `json:"function"`
+	}
+	type message struct {
+		Role      string         `json:"role"`
+		Content   string         `json:"content,omitempty"`
+		ToolCalls []toolCallInfo `json:"tool_calls,omitempty"`
+	}
+	type choice struct {
+		Index   int     `json:"index"`
+		Message message `json:"message"`
+	}
+
+	tcs := make([]toolCallInfo, len(toolCalls))
+	for i, tc := range toolCalls {
+		tcs[i] = toolCallInfo{
+			ID:   tc.id,
+			Type: tc.callType,
+			Function: functionInfo{
+				Name:      tc.fnName,
+				Arguments: tc.fnArgs.String(),
+			},
+		}
+	}
+
+	msg := message{
+		Role:      "assistant",
+		Content:   textContent,
+		ToolCalls: tcs,
+	}
+
+	body := struct {
+		Model   string  `json:"model"`
+		Choices []choice `json:"choices"`
+	}{
+		Model: model,
+		Choices: []choice{{
+			Index:   0,
+			Message: msg,
+		}},
+	}
+	b, _ := json.Marshal(body)
+	return b
 }
 
 // NewCCFormatFromFields creates a Chat Completions Format with a dynamic

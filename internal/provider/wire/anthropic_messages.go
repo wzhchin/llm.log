@@ -54,15 +54,31 @@ func (a *anthropicMessages) Parse(body []byte) (*Result, error) {
 	}, nil
 }
 
-// ParseStream extracts usage from accumulated SSE events.
+// anthropicContentBlock tracks an in-progress content block during streaming.
+type anthropicContentBlock struct {
+	blockType string // "text", "thinking", "tool_use"
+	text      strings.Builder
+	// tool_use fields
+	toolID   string
+	toolName string
+	toolJSON strings.Builder
+}
+
+// ParseStream extracts usage and full content (text, thinking, tool_use)
+// from accumulated SSE events.
 // Anthropic sends:
-//   - message_start → model, input_tokens, cache tokens
-//   - content_block_delta → text content
-//   - message_delta → output_tokens
+//   - message_start       → model, input_tokens, cache tokens
+//   - content_block_start → block type (text/thinking/tool_use), tool id+name
+//   - content_block_delta → text_delta, thinking_delta, or input_json_delta
+//   - content_block_stop  → end of current block
+//   - message_delta       → output_tokens, speed
 func (a *anthropicMessages) ParseStream(events []SSEEvent) (*Result, error) {
 	var result Result
-	var content strings.Builder
 	var details AnthropicDetails
+
+	// Track content blocks as they arrive.
+	var blocks []anthropicContentBlock
+	var current *anthropicContentBlock
 
 	for _, ev := range events {
 		switch ev.Event {
@@ -89,16 +105,49 @@ func (a *anthropicMessages) ParseStream(events []SSEEvent) (*Result, error) {
 				}
 			}
 
+		case "content_block_start":
+			var start struct {
+				ContentBlock struct {
+					Type string `json:"type"`
+					ID   string `json:"id"`
+					Name string `json:"name"`
+				} `json:"content_block"`
+			}
+			if json.Unmarshal(ev.Data, &start) == nil {
+				blocks = append(blocks, anthropicContentBlock{
+					blockType: start.ContentBlock.Type,
+					toolID:    start.ContentBlock.ID,
+					toolName:  start.ContentBlock.Name,
+				})
+				current = &blocks[len(blocks)-1]
+			}
+
 		case "content_block_delta":
+			if current == nil {
+				continue
+			}
 			var delta struct {
 				Delta struct {
-					Type string `json:"type"`
-					Text string `json:"text"`
+					Type        string `json:"type"`
+					Text        string `json:"text"`
+					Thinking    string `json:"thinking"`
+					PartialJSON string `json:"partial_json"`
 				} `json:"delta"`
 			}
-			if json.Unmarshal(ev.Data, &delta) == nil && delta.Delta.Type == "text_delta" {
-				content.WriteString(delta.Delta.Text)
+			if json.Unmarshal(ev.Data, &delta) != nil {
+				continue
 			}
+			switch delta.Delta.Type {
+			case "text_delta":
+				current.text.WriteString(delta.Delta.Text)
+			case "thinking_delta":
+				current.text.WriteString(delta.Delta.Thinking)
+			case "input_json_delta":
+				current.toolJSON.WriteString(delta.Delta.PartialJSON)
+			}
+
+		case "content_block_stop":
+			current = nil
 
 		case "message_delta":
 			var delta struct {
@@ -122,9 +171,67 @@ func (a *anthropicMessages) ParseStream(events []SSEEvent) (*Result, error) {
 		}
 	}
 
-	result.ResponseBody = reconstructStreamBody(result.Model, content.String())
+	result.ResponseBody = reconstructAnthropicStreamBody(result.Model, blocks)
 	if details != (AnthropicDetails{}) {
 		result.Details = details
 	}
 	return &result, nil
+}
+
+// reconstructAnthropicStreamBody builds a JSON response body that the
+// frontend parser (parseAnthropicResponseContent) can consume.
+// Produces {"model":"...","content":[...]} with typed content blocks.
+func reconstructAnthropicStreamBody(model string, blocks []anthropicContentBlock) []byte {
+	type contentBlock struct {
+		Type  string          `json:"type"`
+		Text  string          `json:"text,omitempty"`
+		ID    string          `json:"id,omitempty"`
+		Name  string          `json:"name,omitempty"`
+		Input json.RawMessage `json:"input,omitempty"`
+	}
+
+	content := make([]contentBlock, 0, len(blocks))
+	for _, b := range blocks {
+		switch b.blockType {
+		case "text":
+			text := b.text.String()
+			if text == "" {
+				continue
+			}
+			content = append(content, contentBlock{Type: "text", Text: text})
+		case "thinking":
+			content = append(content, contentBlock{Type: "thinking", Text: b.text.String()})
+		case "tool_use":
+			var input json.RawMessage = json.RawMessage("{}")
+			if raw := b.toolJSON.String(); raw != "" {
+				// Validate JSON; fall back to raw string if invalid.
+				if json.Valid([]byte(raw)) {
+					input = json.RawMessage(raw)
+				}
+			}
+			content = append(content, contentBlock{
+				Type:  "tool_use",
+				ID:    b.toolID,
+				Name:  b.toolName,
+				Input: input,
+			})
+		}
+	}
+
+	// If no blocks were captured, fall back to empty content string
+	// for backward compatibility.
+	if len(content) == 0 {
+		b, _ := json.Marshal(map[string]any{"model": model, "content": ""})
+		return b
+	}
+
+	body := struct {
+		Model   string         `json:"model"`
+		Content []contentBlock `json:"content"`
+	}{
+		Model:   model,
+		Content: content,
+	}
+	b, _ := json.Marshal(body)
+	return b
 }

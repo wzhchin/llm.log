@@ -64,7 +64,9 @@ func TestGLMMessages_Parse_WebSearch(t *testing.T) {
 func TestGLMMessages_ParseStream(t *testing.T) {
 	events := []SSEEvent{
 		{Event: "message_start", Data: []byte(`{"message":{"model":"glm-5.1","usage":{"input_tokens":0,"output_tokens":0}}}`)},
+		{Event: "content_block_start", Data: []byte(`{"content_block":{"type":"text"}}`)},
 		{Event: "content_block_delta", Data: []byte(`{"delta":{"type":"text_delta","text":"Hello"}}`)},
+		{Event: "content_block_stop", Data: []byte(`{}`)},
 		{Event: "message_delta", Data: []byte(`{"usage":{"input_tokens":161,"output_tokens":64,"cache_read_input_tokens":48256}}`)},
 	}
 
@@ -85,10 +87,15 @@ func TestGLMMessages_ParseStream(t *testing.T) {
 		t.Errorf("cache read = %d, want 48256", r.CacheReadTokens)
 	}
 
-	var body map[string]any
+	var body struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+	}
 	json.Unmarshal(r.ResponseBody, &body)
-	if body["content"] != "Hello" {
-		t.Errorf("content = %q", body["content"])
+	if len(body.Content) != 1 || body.Content[0].Text != "Hello" {
+		t.Errorf("content = %+v", body.Content)
 	}
 }
 

@@ -2,7 +2,6 @@ package wire
 
 import (
 	"encoding/json"
-	"strings"
 )
 
 // GLMMessages parses the GLM Messages API format.
@@ -50,8 +49,11 @@ func (g *glmMessages) Parse(body []byte) (*Result, error) {
 
 func (g *glmMessages) ParseStream(events []SSEEvent) (*Result, error) {
 	var result Result
-	var content strings.Builder
 	var webSearches int
+
+	// Reuse Anthropic content block tracking (same SSE structure).
+	var blocks []anthropicContentBlock
+	var current *anthropicContentBlock
 
 	for _, ev := range events {
 		switch ev.Event {
@@ -65,16 +67,46 @@ func (g *glmMessages) ParseStream(events []SSEEvent) (*Result, error) {
 				result.Model = msg.Message.Model
 			}
 
+		case "content_block_start":
+			var start struct {
+				ContentBlock struct {
+					Type string `json:"type"`
+					ID   string `json:"id"`
+					Name string `json:"name"`
+				} `json:"content_block"`
+			}
+			if json.Unmarshal(ev.Data, &start) == nil {
+				blocks = append(blocks, anthropicContentBlock{
+					blockType: start.ContentBlock.Type,
+					toolID:    start.ContentBlock.ID,
+					toolName:  start.ContentBlock.Name,
+				})
+				current = &blocks[len(blocks)-1]
+			}
+
 		case "content_block_delta":
+			if current == nil {
+				continue
+			}
 			var delta struct {
 				Delta struct {
-					Type string `json:"type"`
-					Text string `json:"text"`
+					Type        string `json:"type"`
+					Text        string `json:"text"`
+					PartialJSON string `json:"partial_json"`
 				} `json:"delta"`
 			}
-			if json.Unmarshal(ev.Data, &delta) == nil && delta.Delta.Type == "text_delta" {
-				content.WriteString(delta.Delta.Text)
+			if json.Unmarshal(ev.Data, &delta) != nil {
+				continue
 			}
+			switch delta.Delta.Type {
+			case "text_delta":
+				current.text.WriteString(delta.Delta.Text)
+			case "input_json_delta":
+				current.toolJSON.WriteString(delta.Delta.PartialJSON)
+			}
+
+		case "content_block_stop":
+			current = nil
 
 		case "message_delta":
 			var delta struct {
@@ -103,7 +135,7 @@ func (g *glmMessages) ParseStream(events []SSEEvent) (*Result, error) {
 		}
 	}
 
-	result.ResponseBody = reconstructStreamBody(result.Model, content.String())
+	result.ResponseBody = reconstructAnthropicStreamBody(result.Model, blocks)
 	if webSearches > 0 {
 		result.Details = AnthropicDetails{WebSearchRequests: webSearches}
 	}
