@@ -3,8 +3,6 @@ LDFLAGS  = -s -w -X github.com/lanesket/llm.log/internal/cli.Version=$(VERSION)
 
 .PHONY: build test lint clean setup-hooks build-ui dev-ui
 
-build:
-	go build -ldflags "$(LDFLAGS)" -o llm-log ./cmd/llm-log
 
 test:
 	go test ./...
@@ -18,9 +16,15 @@ clean:
 setup-hooks:
 	git config core.hooksPath .githooks
 
-build-ui:
+build-web:
 	cd web && npm ci && npm run build
+
+build-server:
 	go build -ldflags "$(LDFLAGS)" -o llm-log ./cmd/llm-log
+
+build:
+	make build-web
+	make build-server
 
 dev-ui:
 	go run -ldflags "$(LDFLAGS)" ./cmd/llm-log ui --dev
